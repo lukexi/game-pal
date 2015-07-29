@@ -59,13 +59,13 @@ main = do
 
 renderVR :: (MonadIO m, MonadState World m) 
          => RenderHMD -> Entity Uniforms -> m ()
-renderVR renderHMD cube = renderHMDFrame renderHMD $ \eyePoses -> do
+renderVR renderHMD cube = renderHMDFrame renderHMD $ \eyeViews -> do
 
   glClear (GL_COLOR_BUFFER_BIT .|. GL_DEPTH_BUFFER_BIT)
 
   view <- viewMatrixFromPose <$> use wldPlayer
 
-  renderHMDEyes renderHMD eyePoses $ \projection eyeView -> do
+  renderHMDEyes eyeViews $ \projection eyeView -> do
 
     let finalView = eyeView !*! view 
 
