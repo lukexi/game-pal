@@ -44,6 +44,10 @@ executable game-pal-exe
                      , glfw-pal
                      , gl-pal2
                      , gl
+                     , linear
+                     , mtl
+                     , lens
+                     , oculus-mini
   default-language:    Haskell2010
 
 

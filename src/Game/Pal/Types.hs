@@ -12,6 +12,8 @@ data Pose = Pose
   } deriving (Generic, Binary, Show)
 makeLenses ''Pose
 
+newPose :: Pose
+newPose = Pose 0 (axisAngle (V3 0 1 0) 0)
 
 poseToMatrix :: Pose -> M44 GLfloat
 poseToMatrix (Pose posit orient) = mkTransformation orient posit

@@ -58,8 +58,8 @@ applyGamepadJoystickMovement e = onGamepadAxes e $ \GamepadAllAxes{..} -> do
   -- Quat rotation must be rotation * original rather than vice versa
   posOrientation %= \old -> axisAngle ( V3 0 1 0 ) (-(realToFrac gaxRightStickY) * 0.1) * old
 
-worldHandPoses :: Pose -> [ControllerData] -> [Pose]
-worldHandPoses (Pose playerPos playerRot) hands = map handWorldPose hands
+handsToWorldPoses :: [ControllerData] -> Pose -> [Pose]
+handsToWorldPoses hands (Pose playerPos playerRot) = map handWorldPose hands
   where handWorldPose handData = Pose positWorld orientWorld
           where
             handPosit   = fmap (realToFrac . (/500)) (pos handData) + V3 0 (-1) (-1)
