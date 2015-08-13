@@ -3,6 +3,10 @@ import Graphics.UI.GLFW.Pal
 import Graphics.Oculus
 import Control.Monad
 import System.Hardware.Hydra
+import Control.Monad.Trans
+import Linear
+import Game.Pal.View
+import Graphics.GL
 
 initWindow :: String -> Bool -> Bool -> IO (Window, Events, Maybe HMD, Maybe RenderHMD, Maybe SixenseBase)
 initWindow windowName enableVR enableHydra = do
@@ -28,3 +32,36 @@ initWindow windowName enableVR enableHydra = do
     recenterPose hmd
     return renderHMD
   return (window, events, maybeHMD, maybeRenderHMD, maybeSixenseBase)
+
+renderWith :: MonadIO m
+           => Window
+           -> Maybe RenderHMD
+           -> M44 GLfloat
+           -> (M44 GLfloat -> M44 GLfloat -> m b)
+           -> m ()
+renderWith window maybeRenderHMD viewMat renderFunc = do
+  case maybeRenderHMD of
+      Nothing        -> renderFlat window    viewMat renderFunc
+      Just renderHMD -> renderVR   renderHMD viewMat renderFunc
+
+renderVR :: MonadIO m 
+         => RenderHMD
+         -> M44 GLfloat 
+         -> (M44 GLfloat -> M44 GLfloat -> m b) -> m ()
+renderVR renderHMD viewMat renderFunc = renderHMDFrame renderHMD $ \eyeViews -> 
+
+  renderHMDEyes eyeViews $ \projection eyeView -> do
+
+    let finalView = eyeView !*! viewMat
+
+    renderFunc projection finalView 
+
+renderFlat :: MonadIO m 
+           => Window -> M44 GLfloat -> (M44 GLfloat -> M44 GLfloat -> m b) -> m ()
+renderFlat win viewMat renderFunc = do
+  
+  projection  <- makeProjection win
+  
+  _ <- renderFunc projection viewMat
+
+  swapBuffers win

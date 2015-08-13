@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RankNTypes #-}
 module Game.Pal.Movement where
 import Linear
 import Graphics.GL
@@ -20,43 +21,43 @@ applyMouseLook win = do
 
 -- | Move player by the given vector, 
 -- rotated to be relative to their current orientation
-movePose :: MonadState Pose m => V3 GLfloat -> m ()
-movePose vec = do
-  orient <- use posOrientation
-  posPosition += rotate orient vec
+movePose :: MonadState s m => Lens' s Pose -> V3 GLfloat -> m ()
+movePose poseLens vec = do
+  orient <- use $ poseLens . posOrientation
+  poseLens . posPosition += rotate orient vec
 
-applyWASD :: (MonadIO m, MonadState Pose m) => Window -> m ()
-applyWASD win = do
+applyWASD :: (MonadIO m, MonadState s m) => Window -> Lens' s Pose -> m ()
+applyWASD win poseLens = do
   let pos = 0.1
       neg = -pos
-  whenKeyPressed win Key'W           $ movePose (V3 0   0   neg)
-  whenKeyPressed win Key'S           $ movePose (V3 0   0   pos)
-  whenKeyPressed win Key'A           $ movePose (V3 neg 0   0  )
-  whenKeyPressed win Key'D           $ movePose (V3 pos 0   0  )
-  whenKeyPressed win Key'Space       $ movePose (V3 0   pos 0  )
-  whenKeyPressed win Key'LeftControl $ movePose (V3 0   neg 0  )
+  whenKeyPressed win Key'W           $ movePose poseLens (V3 0   0   neg)
+  whenKeyPressed win Key'S           $ movePose poseLens (V3 0   0   pos)
+  whenKeyPressed win Key'A           $ movePose poseLens (V3 neg 0   0  )
+  whenKeyPressed win Key'D           $ movePose poseLens (V3 pos 0   0  )
+  whenKeyPressed win Key'Space       $ movePose poseLens (V3 0   pos 0  )
+  whenKeyPressed win Key'LeftControl $ movePose poseLens (V3 0   neg 0  )
 
-applyHydraJoystickMovement :: MonadState Pose m => [ControllerData] -> m ()
-applyHydraJoystickMovement [left, right] = do
+applyHydraJoystickMovement :: MonadState s m => [ControllerData] -> Lens' s Pose -> m ()
+applyHydraJoystickMovement [left, right] poseLens = do
   
   -- Move player forward/back/left/right with left joystick
-  movePose (V3 (joystickX left / 10) 0 (-(joystickY left / 10)))
+  movePose poseLens (V3 (joystickX left / 10) 0 (-(joystickY left / 10)))
 
   -- Turn player left/right with right joystick
   -- (quat rotation must be rotation * original)
-  posOrientation %= \old -> (axisAngle ( V3 0 1 0 ) (-joystickX right * 0.1)) * old
+  poseLens . posOrientation %= \old -> (axisAngle ( V3 0 1 0 ) (-joystickX right * 0.1)) * old
   
   -- Move player down and up with left and right joystick clicks
-  when (ButtonJoystick `elem` handButtons left)  $ movePose ( V3 0 (-0.1) 0  )
-  when (ButtonJoystick `elem` handButtons right) $ movePose ( V3 0   0.1  0  )
+  when (ButtonJoystick `elem` handButtons left)  $ movePose poseLens ( V3 0 (-0.1) 0  )
+  when (ButtonJoystick `elem` handButtons right) $ movePose poseLens ( V3 0   0.1  0  )
 
-applyHydraJoystickMovement _ = return ()
+applyHydraJoystickMovement _ _ = return ()
 
-applyGamepadJoystickMovement :: MonadState Pose m => Event -> m ()
-applyGamepadJoystickMovement e = onGamepadAxes e $ \GamepadAllAxes{..} -> do
-  movePose (V3 (realToFrac gaxLeftStickX / 10) 0 (realToFrac gaxLeftStickY / 10))
+applyGamepadJoystickMovement :: MonadState s m => Event -> Lens' s Pose -> m ()
+applyGamepadJoystickMovement e poseLens = onGamepadAxes e $ \GamepadAllAxes{..} -> do
+  movePose poseLens (V3 (realToFrac gaxLeftStickX / 10) 0 (realToFrac gaxLeftStickY / 10))
   -- Quat rotation must be rotation * original rather than vice versa
-  posOrientation %= \old -> axisAngle ( V3 0 1 0 ) (-(realToFrac gaxRightStickY) * 0.1) * old
+  poseLens . posOrientation %= \old -> axisAngle ( V3 0 1 0 ) (-(realToFrac gaxRightStickY) * 0.1) * old
 
 handsToWorldPoses :: [ControllerData] -> Pose -> [Pose]
 handsToWorldPoses hands (Pose playerPos playerRot) = map handWorldPose hands
