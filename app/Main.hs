@@ -33,7 +33,7 @@ data Uniforms = Uniforms
 
 main :: IO ()
 main = do
-  (window, events, _maybeHMD, maybeRenderHMD, _maybeSixenseBase) <- reacquire 0 $ initWindow "GamePal" False False
+  (window, events, _maybeHMD, maybeRenderHMD, _maybeSixenseBase) <- reacquire 0 $ initWindow "GamePal" True True
 
   -- Set up our cube resources
   cubeProg   <- createShaderProgram "app/cube.vert" "app/cube.frag"
@@ -76,7 +76,7 @@ render cube projection viewMat = do
 
     cubes <- use wldCubes
     forM_ cubes $ \obj -> do
-      uniformV4 uDiffuse (V4 0 1 0 1)
+      uniformV4 uDiffuse (V4 1 1 1 1)
 
       let model = mkTransformation (obj ^. posOrientation) (obj ^. posPosition)
 
