@@ -15,8 +15,15 @@ import Control.Lens
 import Data.Data
 import Data.Maybe
 import Halive.Utils
+
+data Cube = Cube
+  { _cubPose :: Pose
+  , _cubColor :: V4 GLfloat
+  }
+makeLenses ''Cube
+
 data World = World
-  { _wldCubes  :: [Pose]
+  { _wldCubes  :: [Cube]
   , _wldPlayer :: Pose
   }
 makeLenses ''World
@@ -29,11 +36,9 @@ data Uniforms = Uniforms
   , uDiffuse             :: UniformLocation (V4  GLfloat)
   } deriving (Data)
 
-
-
 main :: IO ()
 main = do
-  (window, events, _maybeHMD, maybeRenderHMD, _maybeSixenseBase) <- reacquire 0 $ initWindow "GamePal" True True
+  (window, events, _maybeHMD, maybeRenderHMD, _maybeSixenseBase) <- reacquire 0 $ initWindow "GamePal" False False
 
   -- Set up our cube resources
   cubeProg   <- createShaderProgram "app/cube.vert" "app/cube.frag"
@@ -42,13 +47,16 @@ main = do
 
   glEnable GL_DEPTH_TEST
   glClearColor 0 0 0.1 1
-  glEnable GL_CULL_FACE
-  glCullFace GL_BACK
+
   useProgram (program cube)
 
-  let world = World [newPose] (newPose {_posPosition = V3 0 0 5})
+  let world = World 
+                (map (\x -> 
+                  Cube (newPose & posPosition . _x .~ x) (hslColor (x/10) 1 0.5 1))
+                  [-5..5])
+                (newPose {_posPosition = V3 0 0 5})
   void . flip runStateT world . whileWindow window $ do
-    -- applyMouseLook window
+    applyMouseLook window wldPlayer
     applyWASD window wldPlayer
     processEvents events $ \e -> do
       closeOnEscape window e
@@ -76,9 +84,9 @@ render cube projection viewMat = do
 
     cubes <- use wldCubes
     forM_ cubes $ \obj -> do
-      uniformV4 uDiffuse (V4 1 1 1 1)
+      uniformV4 uDiffuse (obj ^. cubColor)
 
-      let model = mkTransformation (obj ^. posOrientation) (obj ^. posPosition)
+      let model = mkTransformation (obj ^. cubPose . posOrientation) (obj ^. cubPose . posPosition)
 
       drawEntity model projectionView cube
 
