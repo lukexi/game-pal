@@ -37,19 +37,23 @@ renderWith :: MonadIO m
            => Window
            -> Maybe RenderHMD
            -> M44 GLfloat
+           -> m ()
            -> (M44 GLfloat -> M44 GLfloat -> m b)
            -> m ()
-renderWith window maybeRenderHMD viewMat renderFunc = do
+renderWith window maybeRenderHMD viewMat frameRenderFunc eyeRenderFunc = do
   case maybeRenderHMD of
-      Nothing        -> renderFlat window    viewMat renderFunc
-      Just renderHMD -> renderVR   renderHMD viewMat renderFunc
+      Nothing        -> frameRenderFunc >> renderFlat window viewMat eyeRenderFunc
+      Just renderHMD -> renderVR   renderHMD viewMat frameRenderFunc eyeRenderFunc
 
 renderVR :: MonadIO m 
          => RenderHMD
          -> M44 GLfloat 
+         -> m ()
          -> (M44 GLfloat -> M44 GLfloat -> m b) -> m ()
-renderVR renderHMD viewMat renderFunc = renderHMDFrame renderHMD $ \eyeViews -> 
-
+renderVR renderHMD viewMat frameRenderFunc renderFunc = renderHMDFrame renderHMD $ \eyeViews -> do
+  
+  frameRenderFunc
+  
   renderHMDEyes eyeViews $ \projection eyeView -> do
 
     let finalView = eyeView !*! viewMat

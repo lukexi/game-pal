@@ -38,7 +38,7 @@ data Uniforms = Uniforms
 
 main :: IO ()
 main = do
-  (window, events, _maybeHMD, maybeRenderHMD, _maybeSixenseBase) <- reacquire 0 $ initWindow "GamePal" False False
+  (window, events, _maybeHMD, maybeRenderHMD, _maybeSixenseBase) <- reacquire 0 $ initWindow "GamePal" True False
 
   -- Set up our cube resources
   cubeProg   <- createShaderProgram "app/cube.vert" "app/cube.frag"
@@ -61,11 +61,11 @@ main = do
     processEvents events $ \e -> do
       closeOnEscape window e
       applyGamepadJoystickMovement e wldPlayer
-
-    glClear (GL_COLOR_BUFFER_BIT .|. GL_DEPTH_BUFFER_BIT)
-
+    
     viewMat <- viewMatrixFromPose <$> use wldPlayer
-    renderWith window maybeRenderHMD viewMat (render cube)
+    renderWith window maybeRenderHMD viewMat 
+      (glClear (GL_COLOR_BUFFER_BIT .|. GL_DEPTH_BUFFER_BIT))
+      (render cube)
 
 render :: (MonadIO m, MonadState World m) 
        => Entity Uniforms
