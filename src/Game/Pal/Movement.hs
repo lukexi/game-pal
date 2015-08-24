@@ -39,11 +39,16 @@ applyWASD win poseLens = do
   whenKeyPressed win Key'Space       $ movePose poseLens (V3 0   pos 0  )
   whenKeyPressed win Key'LeftControl $ movePose poseLens (V3 0   neg 0  )
 
+deadzoneOf zone value = if abs value > zone then value else 0
+
 applyHydraJoystickMovement :: MonadState s m => [ControllerData] -> Lens' s Pose -> m ()
 applyHydraJoystickMovement [left, right] poseLens = do
   
   -- Move player forward/back/left/right with left joystick
-  movePose poseLens (V3 (joystickX left / 10) 0 (-(joystickY left / 10)))
+  movePose poseLens $ V3 
+    (joystickX left / 10) 
+    0 
+    (deadzoneOf 0.01 (-joystickY left / 10))
 
   -- Turn player left/right with right joystick
   -- (quat rotation must be rotation * original)
