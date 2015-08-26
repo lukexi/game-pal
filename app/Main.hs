@@ -14,7 +14,7 @@ import Control.Monad.State
 import Control.Lens
 import Data.Data
 import Data.Maybe
-import Halive.Utils
+-- import Halive.Utils
 
 data Cube = Cube
   { _cubPose :: Pose
@@ -38,7 +38,8 @@ data Uniforms = Uniforms
 
 main :: IO ()
 main = do
-  (window, events, _maybeHMD, maybeRenderHMD, _maybeSixenseBase) <- reacquire 0 $ initWindow "GamePal" True False
+  -- (window, events, _maybeHMD, maybeRenderHMD, _maybeSixenseBase) <- reacquire 0 $ initWindow "GamePal" True False
+  (window, events, _maybeHMD, maybeRenderHMD, _maybeSixenseBase) <- initWindow "GamePal" True False
 
   -- Set up our cube resources
   cubeProg   <- createShaderProgram "app/cube.vert" "app/cube.frag"
