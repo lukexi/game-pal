@@ -48,15 +48,15 @@ applyHydraJoystickMovement [left, right] poseLens = do
   movePose poseLens $ V3 
     (joystickX left / 10) 
     0 
-    (deadzoneOf 0.01 (-joystickY left / 10))
+    (deadzoneOf 0.05 (-joystickY left / 10))
 
   -- Turn player left/right with right joystick
   -- (quat rotation must be rotation * original)
   poseLens . posOrientation %= \old -> (axisAngle ( V3 0 1 0 ) (-joystickX right * 0.1)) * old
   
   -- Move player down and up with left and right joystick clicks
-  when (ButtonJoystick `elem` handButtons left)  $ movePose poseLens ( V3 0 (-0.1) 0  )
-  when (ButtonJoystick `elem` handButtons right) $ movePose poseLens ( V3 0   0.1  0  )
+  when (ButtonJoystick `elem` handButtons left)  $ movePose poseLens ( V3 0 (-0.01) 0  )
+  when (ButtonJoystick `elem` handButtons right) $ movePose poseLens ( V3 0   0.01  0  )
 
 applyHydraJoystickMovement _ _ = return ()
 
