@@ -6,13 +6,14 @@ import System.Hardware.Hydra
 import Control.Monad.Trans
 import Linear
 import Game.Pal.View
+import Game.Pal.Types
 import Graphics.GL
 
-initWindow :: String -> Bool -> Bool -> IO (Window, Events, Maybe HMD, Maybe RenderHMD, Maybe SixenseBase)
-initWindow windowName enableVR enableHydra = do
-  maybeSixenseBase <- if enableHydra then Just <$> initSixense else return Nothing
+initGamePal :: String -> [GamePalDevices] -> IO GamePal
+initGamePal windowName devices = do
+  maybeSixenseBase <- if UseHydra `elem` devices then Just <$> initSixense else return Nothing
 
-  (resX, resY, maybeHMD) <- if enableVR 
+  (resX, resY, maybeHMD) <- if UseOculus `elem` devices
     then do
       hmd          <- createHMD
       (resX, resY) <- getHMDResolution hmd
@@ -31,7 +32,13 @@ initWindow windowName enableVR enableHydra = do
     dismissHSWDisplay hmd
     recenterPose hmd
     return renderHMD
-  return (window, events, maybeHMD, maybeRenderHMD, maybeSixenseBase)
+  return $ GamePal
+    { gpWindow      = window
+    , gpEvents      = events
+    , gpHMD         = maybeHMD
+    , gpRenderHMD   = maybeRenderHMD
+    , gpSixenseBase = maybeSixenseBase
+    }
 
 renderWith :: MonadIO m
            => Window

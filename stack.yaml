@@ -1,7 +1,7 @@
 flags: {}
 packages:
 - '.'
-- '../gl-pal2'
+- '../gl-pal'
 - '../glfw-pal'
 - '../hydra-hs'
 - '../oculus-mini'

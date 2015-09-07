@@ -7,7 +7,7 @@ module Main where
 
 import Game.Pal
 import Graphics.UI.GLFW.Pal
-import Graphics.GL.Pal2
+import Graphics.GL.Pal
 import Graphics.GL
 import Linear
 import Control.Monad.State
@@ -38,50 +38,50 @@ data Uniforms = Uniforms
 
 main :: IO ()
 main = do
-  -- (window, events, _maybeHMD, maybeRenderHMD, _maybeSixenseBase) <- reacquire 0 $ initWindow "GamePal" True False
-  (window, events, _maybeHMD, maybeRenderHMD, _maybeSixenseBase) <- initWindow "GamePal" True False
+
+  GamePal{..} <- initGamePal "GamePal" [UseOculus]
 
   -- Set up our cube resources
   cubeProg   <- createShaderProgram "app/cube.vert" "app/cube.frag"
   cubeGeo    <- cubeGeometry (1 :: V3 GLfloat) (V3 1 1 1)
-  cube       <- entity cubeGeo  cubeProg 
+  cubeShape  <- makeShape cubeGeo cubeProg
 
   glEnable GL_DEPTH_TEST
   glClearColor 0 0 0.1 1
 
-  useProgram (program cube)
+  useProgram (sProgram cubeShape)
 
   let world = World 
                 (map (\x -> 
                   Cube (newPose & posPosition . _x .~ x) (hslColor (x/10) 1 0.5 1))
                   [-5..5])
                 (newPose {_posPosition = V3 0 0 5})
-  void . flip runStateT world . whileWindow window $ do
-    applyMouseLook window wldPlayer
-    applyWASD window wldPlayer
-    processEvents events $ \e -> do
-      closeOnEscape window e
+  void . flip runStateT world . whileWindow gpWindow $ do
+    applyMouseLook gpWindow wldPlayer
+    applyWASD gpWindow wldPlayer
+    processEvents gpEvents $ \e -> do
+      closeOnEscape gpWindow e
       applyGamepadJoystickMovement e wldPlayer
     
     viewMat <- viewMatrixFromPose <$> use wldPlayer
-    renderWith window maybeRenderHMD viewMat 
+    renderWith gpWindow gpRenderHMD viewMat 
       (glClear (GL_COLOR_BUFFER_BIT .|. GL_DEPTH_BUFFER_BIT))
-      (render cube)
+      (render cubeShape)
 
 render :: (MonadIO m, MonadState World m) 
-       => Entity Uniforms
+       => Shape Uniforms
        -> M44 GLfloat
        -> M44 GLfloat
        -> m ()
-render cube projection viewMat = do
-  let Uniforms{..} = uniforms cube
+render cubeShape projection viewMat = do
+  let Uniforms{..} = sUniforms cubeShape
       projectionView = projection !*! viewMat
       -- We extract eyePos from the view matrix to get Oculus offsets baked in
       eyePos = fromMaybe viewMat (inv44 viewMat) ^. translation
 
   uniformV3 uCamera eyePos
 
-  withVAO (vAO cube) $ do
+  withVAO (sVAO cubeShape) $ do
 
     cubes <- use wldCubes
     forM_ cubes $ \obj -> do
@@ -89,16 +89,16 @@ render cube projection viewMat = do
 
       let model = mkTransformation (obj ^. cubPose . posOrientation) (obj ^. cubPose . posPosition)
 
-      drawEntity model projectionView cube
+      drawShape model projectionView cubeShape
 
-drawEntity :: MonadIO m => M44 GLfloat -> M44 GLfloat -> Entity Uniforms -> m ()
-drawEntity model projectionView anEntity = do 
+drawShape :: MonadIO m => M44 GLfloat -> M44 GLfloat -> Shape Uniforms -> m ()
+drawShape model projectionView shape = do 
 
-  let Uniforms{..} = uniforms anEntity
+  let Uniforms{..} = sUniforms shape
 
   uniformM44 uModelViewProjection (projectionView !*! model)
   uniformM44 uInverseModel        (fromMaybe model (inv44 model))
   uniformM44 uModel               model
 
-  let vc = vertCount (geometry anEntity)
+  let vc = vertCount (sGeometry shape)
   glDrawElements GL_TRIANGLES vc GL_UNSIGNED_INT nullPtr

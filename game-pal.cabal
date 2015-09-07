@@ -29,7 +29,7 @@ library
     linear,
     gl,
     glfw-pal,
-    gl-pal2,
+    gl-pal,
     hydra-hs,
     oculus-mini
   default-language:    Haskell2010
@@ -43,13 +43,13 @@ executable game-pal
   build-depends:       base
                      , game-pal
                      , glfw-pal
-                     , gl-pal2
+                     , gl-pal
                      , gl
                      , linear
                      , mtl
                      , lens
                      , oculus-mini
-                     --, halive
+                     -- , halive
   default-language:    Haskell2010
 
 
