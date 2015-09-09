@@ -23,8 +23,15 @@ initGamePal windowName devices = do
     setWindowSize window (resX `div` 2) (resY `div` 2)
 
   maybeHMD <- if UseOculus `elem` devices
-    then Just <$> createHMD
+    then do
+      hmd <- createHMD
+      setWindowSize window 
+        (fromIntegral . fst . hmdBufferSize $ hmd) 
+        (fromIntegral . snd . hmdBufferSize $ hmd)
+      return (Just hmd)
     else return Nothing
+
+  
 
   return $ GamePal
     { gpWindow      = window
@@ -45,8 +52,9 @@ renderWith window maybeRenderHMD viewMat frameRenderFunc eyeRenderFunc = do
       Nothing  -> do
         frameRenderFunc
         renderFlat window viewMat eyeRenderFunc
-      Just hmd -> 
+      Just hmd -> do
         renderVR hmd viewMat frameRenderFunc eyeRenderFunc
+        renderHMDMirror hmd
   -- We always call swapBuffers since mirroring is handled independently in 0.6+
   swapBuffers window
 
