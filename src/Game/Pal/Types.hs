@@ -15,7 +15,6 @@ data GamePal = GamePal
   { gpWindow      :: !Window
   , gpEvents      :: !Events
   , gpHMD         :: !(Maybe HMD)
-  , gpRenderHMD   :: !(Maybe RenderHMD)
   , gpSixenseBase :: !(Maybe SixenseBase)
   }
 
