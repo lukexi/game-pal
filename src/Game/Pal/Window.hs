@@ -18,9 +18,10 @@ initGamePal windowName devices = do
       hmd          <- createHMD
       (resX, resY) <- getHMDResolution hmd
       return (resX, resY, Just hmd)
-    else return (1024, 768, Nothing)
+    else return (1024, 720, Nothing)
   
   (window, events) <- createWindow windowName resX resY
+
   -- Compensate for retina framebuffers on Mac
   (frameW, frameH) <- getFramebufferSize window
   when (frameW > resX && frameH > resY) $
