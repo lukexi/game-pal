@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 module Game.Pal.Window where
 import Graphics.UI.GLFW.Pal
 import Graphics.Oculus
@@ -8,6 +9,13 @@ import Linear
 import Game.Pal.View
 import Game.Pal.Types
 import Graphics.GL
+
+oculusSupported :: Bool
+#if defined(mingw32_HOST_OS)
+oculusSupported = True
+#else
+oculusSupported = False
+#endif
 
 initGamePal :: String -> [GamePalDevices] -> IO GamePal
 initGamePal windowName devices = do
@@ -22,7 +30,7 @@ initGamePal windowName devices = do
   when (frameW > resX && frameH > resY) $
     setWindowSize window (resX `div` 2) (resY `div` 2)
 
-  maybeHMD <- if UseOculus `elem` devices
+  maybeHMD <- if UseOculus `elem` devices && oculusSupported
     then do
       hmd <- createHMD
       setWindowSize window 

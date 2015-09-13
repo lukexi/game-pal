@@ -12,6 +12,7 @@ import Control.Lens
 import Game.Pal.Types
 import System.Hardware.Hydra
 
+moveSpeed :: GLfloat
 moveSpeed = 0.01
 
 -- | These functions are all meant to be used with Control.Lens's 'zoom'
