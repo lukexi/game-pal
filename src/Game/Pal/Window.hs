@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 module Game.Pal.Window where
 import Graphics.UI.GLFW.Pal
 import Graphics.Oculus
@@ -9,56 +10,68 @@ import Game.Pal.View
 import Game.Pal.Types
 import Graphics.GL
 
+oculusSupported :: Bool
+#if defined(mingw32_HOST_OS)
+oculusSupported = True
+#else
+oculusSupported = False
+#endif
+
 initGamePal :: String -> [GamePalDevices] -> IO GamePal
 initGamePal windowName devices = do
   maybeSixenseBase <- if UseHydra `elem` devices then Just <$> initSixense else return Nothing
 
-  (resX, resY, maybeHMD) <- if UseOculus `elem` devices
-    then do
-      hmd          <- createHMD
-      (resX, resY) <- getHMDResolution hmd
-      return (resX, resY, Just hmd)
-    else return (1024, 720, Nothing)
+  
+  let (resX, resY) = (1024, 768)
   
   (window, events) <- createWindow windowName resX resY
-
   -- Compensate for retina framebuffers on Mac
   (frameW, frameH) <- getFramebufferSize window
   when (frameW > resX && frameH > resY) $
     setWindowSize window (resX `div` 2) (resY `div` 2)
 
-  -- Set up Oculus
-  maybeRenderHMD <- forM maybeHMD $ \hmd -> do
-    renderHMD <- configureHMDRendering hmd windowName
-    dismissHSWDisplay hmd
-    recenterPose hmd
-    return renderHMD
+  maybeHMD <- if UseOculus `elem` devices && oculusSupported
+    then do
+      hmd <- createHMD
+      setWindowSize window 
+        (fromIntegral . fst . hmdBufferSize $ hmd) 
+        (fromIntegral . snd . hmdBufferSize $ hmd)
+      return (Just hmd)
+    else return Nothing
+
+  
+
   return $ GamePal
     { gpWindow      = window
     , gpEvents      = events
     , gpHMD         = maybeHMD
-    , gpRenderHMD   = maybeRenderHMD
     , gpSixenseBase = maybeSixenseBase
     }
 
 renderWith :: MonadIO m
            => Window
-           -> Maybe RenderHMD
+           -> Maybe HMD
            -> M44 GLfloat
            -> m ()
            -> (M44 GLfloat -> M44 GLfloat -> m b)
            -> m ()
 renderWith window maybeRenderHMD viewMat frameRenderFunc eyeRenderFunc = do
   case maybeRenderHMD of
-      Nothing        -> frameRenderFunc >> renderFlat window viewMat eyeRenderFunc
-      Just renderHMD -> renderVR   renderHMD viewMat frameRenderFunc eyeRenderFunc
+      Nothing  -> do
+        frameRenderFunc
+        renderFlat window viewMat eyeRenderFunc
+      Just hmd -> do
+        renderVR hmd viewMat frameRenderFunc eyeRenderFunc
+        renderHMDMirror hmd
+  -- We always call swapBuffers since mirroring is handled independently in 0.6+
+  swapBuffers window
 
 renderVR :: MonadIO m 
-         => RenderHMD
+         => HMD
          -> M44 GLfloat 
          -> m ()
          -> (M44 GLfloat -> M44 GLfloat -> m b) -> m ()
-renderVR renderHMD viewMat frameRenderFunc renderFunc = renderHMDFrame renderHMD $ \eyeViews -> do
+renderVR hmd viewMat frameRenderFunc renderFunc = renderHMDFrame hmd $ \eyeViews -> do
   
   frameRenderFunc
   
@@ -76,4 +89,4 @@ renderFlat win viewMat renderFunc = do
   
   _ <- renderFunc projection viewMat
 
-  swapBuffers win
+  return ()
