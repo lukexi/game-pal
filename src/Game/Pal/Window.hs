@@ -9,6 +9,7 @@ import Linear
 import Game.Pal.View
 import Game.Pal.Types
 import Graphics.GL
+import System.Mem
 
 oculusSupported :: Bool
 #if defined(mingw32_HOST_OS)
@@ -65,6 +66,7 @@ renderWith window maybeRenderHMD viewMat frameRenderFunc eyeRenderFunc = do
         renderHMDMirror hmd
   -- We always call swapBuffers since mirroring is handled independently in 0.6+
   swapBuffers window
+  liftIO performGC
 
 renderVR :: MonadIO m 
          => HMD
