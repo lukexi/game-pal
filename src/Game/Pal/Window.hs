@@ -66,7 +66,8 @@ renderWith window maybeRenderHMD viewMat frameRenderFunc eyeRenderFunc = do
         renderHMDMirror hmd
   -- We always call swapBuffers since mirroring is handled independently in 0.6+
   swapBuffers window
-  liftIO performGC
+  -- Commenting out temporarily because it breaks Halive:
+  -- liftIO performGC
 
 renderVR :: MonadIO m 
          => HMD
