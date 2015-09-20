@@ -17,11 +17,12 @@ library
   hs-source-dirs:      src
   exposed-modules:     
     Game.Pal
+    Game.Pal.Movement
+    Game.Pal.Pose
     Game.Pal.Types
     Game.Pal.View
-    Game.Pal.Movement
     Game.Pal.Window
-  build-depends:       
+  build-depends:
     base,
     binary,
     mtl,

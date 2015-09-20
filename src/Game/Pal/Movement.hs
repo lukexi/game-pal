@@ -10,6 +10,7 @@ import Graphics.UI.GLFW.Pal
 import Control.Monad.State
 import Control.Lens
 import Game.Pal.Types
+import Game.Pal.Pose
 import System.Hardware.Hydra
 
 moveSpeed :: GLfloat
