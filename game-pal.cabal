@@ -32,7 +32,8 @@ library
     glfw-pal,
     gl-pal,
     hydra-hs,
-    oculus-mini
+    oculus-mini,
+    time
   default-language:    Haskell2010
   ghc-options:         -Wall -O2
   ghc-prof-options:    -Wall -O2 -fprof-auto

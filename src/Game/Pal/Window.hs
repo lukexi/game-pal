@@ -10,6 +10,9 @@ import Game.Pal.View
 import Game.Pal.Types
 import Graphics.GL
 import System.Mem
+import Data.Time
+import Data.IORef
+
 
 oculusSupported :: Bool
 #if defined(mingw32_HOST_OS)
@@ -31,6 +34,8 @@ initGamePal windowName devices = do
   when (frameW > resX && frameH > resY) $
     setWindowSize window (resX `div` 2) (resY `div` 2)
 
+  swapInterval 1
+
   maybeHMD <- if UseOculus `elem` devices && oculusSupported
     then do
       hmd <- createHMD
@@ -40,13 +45,14 @@ initGamePal windowName devices = do
       return (Just hmd)
     else return Nothing
 
-  
+  getDelta <- makeGetDelta
 
   return $ GamePal
     { gpWindow      = window
     , gpEvents      = events
     , gpHMD         = maybeHMD
     , gpSixenseBase = maybeSixenseBase
+    , gpGetDelta    = getDelta
     }
 
 renderWith :: MonadIO m
@@ -93,3 +99,23 @@ renderFlat win viewMat renderFunc = do
   _ <- renderFunc projection viewMat
 
   return ()
+
+
+makeGetDelta  = do 
+
+  start <- getCurrentTime
+  timeRef <- newIORef start
+
+  let getDelta = do
+
+        lastTime <- readIORef timeRef
+        currTime <- getCurrentTime
+
+        let diffTime = diffUTCTime currTime lastTime
+
+        writeIORef timeRef currTime
+
+        return diffTime 
+
+  return getDelta
+

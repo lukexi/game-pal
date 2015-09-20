@@ -23,8 +23,9 @@ data Cube = Cube
 makeLenses ''Cube
 
 data World = World
-  { _wldCubes  :: [Cube]
-  , _wldPlayer :: Pose
+  { _wldCubes  :: ![Cube]
+  , _wldPlayer :: !Pose
+  , _wldTime   :: !Float
   }
 makeLenses ''World
 
@@ -34,12 +35,13 @@ data Uniforms = Uniforms
   , uModel               :: UniformLocation (M44 GLfloat)
   , uCamera              :: UniformLocation (V3  GLfloat)
   , uDiffuse             :: UniformLocation (V4  GLfloat)
+  , uTime                :: UniformLocation GLfloat
   } deriving (Data)
 
 main :: IO ()
 main = do
 
-  GamePal{..} <- initGamePal "GamePal" [UseOculus]
+  GamePal{..} <- initGamePal "GamePal" []--[UseOculus]
 
   -- Set up our cube resources
   cubeProg   <- createShaderProgram "app/cube.vert" "app/cube.frag"
@@ -56,7 +58,14 @@ main = do
                   Cube (newPose & posPosition . _x .~ x) (hslColor (x/10) 1 0.5 1))
                   [-5..5])
                 (newPose {_posPosition = V3 0 0 5})
+                0
   void . flip runStateT world . whileWindow gpWindow $ do
+    --liftIO . print =<< liftIO gpGetDelta
+
+    delta <- realToFrac <$> liftIO gpGetDelta
+    wldTime += delta
+
+
     applyMouseLook gpWindow wldPlayer
     applyWASD gpWindow wldPlayer
     processEvents gpEvents $ \e -> do
@@ -80,6 +89,7 @@ render cubeShape projection viewMat = do
       eyePos = fromMaybe viewMat (inv44 viewMat) ^. translation
 
   uniformV3 uCamera eyePos
+  uniformF uTime =<< use wldTime
 
   withVAO (sVAO cubeShape) $ do
 

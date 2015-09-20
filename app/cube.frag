@@ -2,6 +2,7 @@
 
 uniform vec3 uCamera;
 uniform vec4 uDiffuse;
+uniform float uTime;
 
 in      vec3 vPosition;
 in      vec3 vNormal;
@@ -32,5 +33,7 @@ void main() {
     float diffuseCoefficient = max(ambient, dot(normal, surfaceToLight));
     vec3 diffuseLit = diffuseCoefficient * surfaceColor.rgb * lightColor;
 
+
     fragColor = vec4(diffuseLit, uDiffuse.a);
+    //fragColor = vec4( vNormal * .5 + .5 , 1. ) * sin( uTime * 6.28);
 }
