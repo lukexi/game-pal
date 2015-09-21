@@ -3,20 +3,19 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE RankNTypes #-}
 module Game.Pal.Movement where
-import Linear
+import Linear.Extra
 import Graphics.GL
 import Graphics.Oculus
 import Graphics.UI.GLFW.Pal
 import Control.Monad.State
-import Control.Lens
-import Game.Pal.Pose
+import Control.Lens.Extra
 import System.Hardware.Hydra
 
 moveSpeed :: GLfloat
 moveSpeed = 0.01
 
 -- | These functions are all meant to be used with Control.Lens's 'zoom'
-applyMouseLook :: (MonadIO m, MonadState s m) => Window -> Lens' s Pose -> m ()
+applyMouseLook :: (MonadIO m, MonadState s m) => Window -> Lens' s (Pose GLfloat) -> m ()
 applyMouseLook win poseLens = do
   (x,y) <- getCursorPos win
   (w,h) <- getWindowSize win
@@ -26,12 +25,12 @@ applyMouseLook win poseLens = do
 
 -- | Move player by the given vector, 
 -- rotated to be relative to their current orientation
-movePose :: MonadState s m => Lens' s Pose -> V3 GLfloat -> m ()
+movePose :: MonadState s m => Lens' s (Pose GLfloat) -> V3 GLfloat -> m ()
 movePose poseLens vec = do
   orient <- use $ poseLens . posOrientation
   poseLens . posPosition += rotate orient vec
 
-applyWASD :: (MonadIO m, MonadState s m) => Window -> Lens' s Pose -> m ()
+applyWASD :: (MonadIO m, MonadState s m) => Window -> Lens' s (Pose GLfloat) -> m ()
 applyWASD win poseLens = do
   shiftDown <- (== KeyState'Pressed) <$> getKey win Key'LeftShift
   let pos = moveSpeed    * if shiftDown then 10 else 1
@@ -46,7 +45,7 @@ applyWASD win poseLens = do
 deadzoneOf :: (Num a, Ord a) => a -> a -> a
 deadzoneOf zone value = if abs value > zone then value else 0
 
-applyHydraJoystickMovement :: MonadState s m => [ControllerData] -> Lens' s Pose -> m ()
+applyHydraJoystickMovement :: MonadState s m => [ControllerData] -> Lens' s (Pose GLfloat) -> m ()
 applyHydraJoystickMovement [left, right] poseLens = do
   
   -- Move player forward/back/left/right with left joystick
@@ -65,14 +64,14 @@ applyHydraJoystickMovement [left, right] poseLens = do
 
 applyHydraJoystickMovement _ _ = return ()
 
-applyGamepadJoystickMovement :: MonadState s m => Event -> Lens' s Pose -> m ()
+applyGamepadJoystickMovement :: MonadState s m => Event -> Lens' s (Pose GLfloat) -> m ()
 applyGamepadJoystickMovement e poseLens = onGamepadAxes e $ \GamepadAllAxes{..} -> do
   movePose poseLens (V3 (realToFrac gaxLeftStickX / 10) 0 (realToFrac gaxLeftStickY / 10))
   -- Quat rotation must be rotation * original rather than vice versa
   poseLens . posOrientation %= \old -> 
     axisAngle ( V3 0 1 0 ) (-(realToFrac gaxRightStickY) * moveSpeed) * old
 
-handsToWorldPoses :: [ControllerData] -> Pose -> [Pose]
+handsToWorldPoses :: [ControllerData] -> (Pose GLfloat) -> [(Pose GLfloat)]
 handsToWorldPoses hands (Pose playerPos playerRot) = map handWorldPose hands
   where handWorldPose handData = Pose positWorld orientWorld
           where
@@ -81,7 +80,7 @@ handsToWorldPoses hands (Pose playerPos playerRot) = map handWorldPose hands
             positWorld  = rotate playerRot handPosit + playerPos
             orientWorld = playerRot * handOrient
 
-getMaybeHMDPose :: MonadIO m => Maybe HMD -> m Pose
+getMaybeHMDPose :: MonadIO m => Maybe HMD -> m (Pose GLfloat)
 getMaybeHMDPose maybeHMD = do
   (headOrient, headPosit) <- maybe 
     (return (axisAngle (V3 0 1 0) 0, V3 0 0 0)) 

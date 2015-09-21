@@ -6,7 +6,7 @@ import Graphics.Oculus
 import Control.Monad
 import System.Hardware.Hydra
 import Control.Monad.Trans
-import Linear
+import Linear.Extra
 import Game.Pal.View
 import Game.Pal.Types
 import Graphics.GL

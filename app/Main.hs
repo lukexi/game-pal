@@ -17,14 +17,14 @@ import Data.Maybe
 -- import Halive.Utils
 
 data Cube = Cube
-  { _cubPose :: Pose
-  , _cubColor :: V4 GLfloat
+  { _cubPose :: !(Pose GLfloat)
+  , _cubColor :: !(V4 GLfloat)
   }
 makeLenses ''Cube
 
 data World = World
   { _wldCubes  :: ![Cube]
-  , _wldPlayer :: !Pose
+  , _wldPlayer :: !(Pose GLfloat)
   , _wldTime   :: !Float
   }
 makeLenses ''World
@@ -54,11 +54,14 @@ main = do
   useProgram (sProgram cubeShape)
 
   let world = World 
-                (map (\x -> 
-                  Cube (newPose & posPosition . _x .~ x) (hslColor (x/10) 1 0.5 1))
-                  [-5..5])
-                (newPose {_posPosition = V3 0 0 5})
-                0
+        { _wldCubes = flip map [-5..5] $ 
+            \x -> Cube 
+              { _cubPose = newPose & posPosition . _x .~ x
+              , _cubColor = hslColor (x/10) 1 0.5 1
+              }
+        , _wldPlayer = newPose {_posPosition = V3 0 0 5}
+        , _wldTime = 0
+        }
   void . flip runStateT world . whileWindow gpWindow $ do
     --liftIO . print =<< liftIO gpGetDelta
 

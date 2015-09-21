@@ -18,7 +18,6 @@ library
   exposed-modules:     
     Game.Pal
     Game.Pal.Movement
-    Game.Pal.Pose
     Game.Pal.Types
     Game.Pal.View
     Game.Pal.Window
@@ -26,8 +25,8 @@ library
     base,
     binary,
     mtl,
-    lens,
-    linear,
+    lens-extra,
+    linear-extra,
     gl,
     glfw-pal,
     gl-pal,
