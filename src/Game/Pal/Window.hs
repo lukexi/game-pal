@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE RecordWildCards #-}
 module Game.Pal.Window where
 import Graphics.UI.GLFW.Pal
 import Graphics.Oculus
@@ -21,8 +22,8 @@ oculusSupported = True
 oculusSupported = False
 #endif
 
-initGamePal :: String -> [GamePalDevices] -> IO GamePal
-initGamePal windowName devices = do
+initGamePal :: String -> GCPerFrame -> [GamePalDevices] -> IO GamePal
+initGamePal windowName gcPerFrame devices = do
   maybeSixenseBase <- if UseHydra `elem` devices then Just <$> initSixense else return Nothing
 
   
@@ -34,7 +35,7 @@ initGamePal windowName devices = do
   when (frameW > resX && frameH > resY) $
     setWindowSize window (resX `div` 2) (resY `div` 2)
 
-  swapInterval 1
+  swapInterval 0
 
   maybeHMD <- if UseOculus `elem` devices && oculusSupported
     then do
@@ -53,27 +54,28 @@ initGamePal windowName devices = do
     , gpHMD         = maybeHMD
     , gpSixenseBase = maybeSixenseBase
     , gpGetDelta    = getDelta
+    , gpGCPerFrame  = gcPerFrame
     }
 
 renderWith :: MonadIO m
-           => Window
-           -> Maybe HMD
+           => GamePal
            -> M44 GLfloat
            -> m ()
            -> (M44 GLfloat -> M44 GLfloat -> m b)
            -> m ()
-renderWith window maybeRenderHMD viewMat frameRenderFunc eyeRenderFunc = do
-  case maybeRenderHMD of
+renderWith GamePal{..} viewMat frameRenderFunc eyeRenderFunc = do
+  case gpHMD of
       Nothing  -> do
         frameRenderFunc
-        renderFlat window viewMat eyeRenderFunc
+        renderFlat gpWindow viewMat eyeRenderFunc
       Just hmd -> do
         renderVR hmd viewMat frameRenderFunc eyeRenderFunc
         renderHMDMirror hmd
   -- We always call swapBuffers since mirroring is handled independently in 0.6+
-  swapBuffers window
+  swapBuffers gpWindow
   -- Commenting out temporarily because it breaks Halive:
-  -- liftIO performGC
+  when (gpGCPerFrame == GCPerFrame) $ 
+    liftIO performGC
 
 renderVR :: MonadIO m 
          => HMD
@@ -100,7 +102,7 @@ renderFlat win viewMat renderFunc = do
 
   return ()
 
-
+makeGetDelta :: IO (IO NominalDiffTime)
 makeGetDelta  = do 
 
   start <- getCurrentTime

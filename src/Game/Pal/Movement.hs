@@ -9,7 +9,6 @@ import Graphics.Oculus
 import Graphics.UI.GLFW.Pal
 import Control.Monad.State
 import Control.Lens
-import Game.Pal.Types
 import Game.Pal.Pose
 import System.Hardware.Hydra
 
@@ -34,8 +33,9 @@ movePose poseLens vec = do
 
 applyWASD :: (MonadIO m, MonadState s m) => Window -> Lens' s Pose -> m ()
 applyWASD win poseLens = do
-  let pos = moveSpeed
-      neg = -moveSpeed
+  shiftDown <- (== KeyState'Pressed) <$> getKey win Key'LeftShift
+  let pos = moveSpeed    * if shiftDown then 10 else 1
+      neg = (-moveSpeed) * if shiftDown then 10 else 1
   whenKeyPressed win Key'W           $ movePose poseLens (V3 0   0   neg)
   whenKeyPressed win Key'S           $ movePose poseLens (V3 0   0   pos)
   whenKeyPressed win Key'A           $ movePose poseLens (V3 neg 0   0  )
@@ -43,6 +43,7 @@ applyWASD win poseLens = do
   whenKeyPressed win Key'Q           $ movePose poseLens (V3 0   pos 0  )
   whenKeyPressed win Key'E           $ movePose poseLens (V3 0   neg 0  )
 
+deadzoneOf :: (Num a, Ord a) => a -> a -> a
 deadzoneOf zone value = if abs value > zone then value else 0
 
 applyHydraJoystickMovement :: MonadState s m => [ControllerData] -> Lens' s Pose -> m ()

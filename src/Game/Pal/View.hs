@@ -3,7 +3,6 @@ import Linear
 import Graphics.UI.GLFW.Pal
 import Control.Monad.State
 import Graphics.GL
-import Game.Pal.Types
 import Game.Pal.Pose
 
 -- | Get a view matrix for a camera at a given position and orientation

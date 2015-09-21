@@ -41,7 +41,7 @@ data Uniforms = Uniforms
 main :: IO ()
 main = do
 
-  GamePal{..} <- initGamePal "GamePal" []--[UseOculus]
+  gamePal@GamePal{..} <- initGamePal "GamePal" GCPerFrame []
 
   -- Set up our cube resources
   cubeProg   <- createShaderProgram "app/cube.vert" "app/cube.frag"
@@ -73,7 +73,7 @@ main = do
       applyGamepadJoystickMovement e wldPlayer
     
     viewMat <- viewMatrixFromPose <$> use wldPlayer
-    renderWith gpWindow gpHMD viewMat 
+    renderWith gamePal viewMat 
       (glClear (GL_COLOR_BUFFER_BIT .|. GL_DEPTH_BUFFER_BIT))
       (render cubeShape)
 
