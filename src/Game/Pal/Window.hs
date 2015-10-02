@@ -27,7 +27,7 @@ initGamePal windowName gcPerFrame devices = do
   maybeSixenseBase <- if UseHydra `elem` devices then Just <$> initSixense else return Nothing
 
   
-  let (resX, resY) = (1024, 768)
+  let (resX, resY) = (2000, 1000)
   
   (window, events) <- createWindow windowName resX resY
   -- Compensate for retina framebuffers on Mac
