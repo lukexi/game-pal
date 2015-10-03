@@ -53,7 +53,7 @@ data Uniforms = Uniforms
 main :: IO ()
 main = do
 
-  gamePal@GamePal{..} <- reacquire 0 $ initGamePal "GamePal" NoGCPerFrame []
+  gamePal@GamePal{..} <- reacquire 0 $ initGamePal "GamePal" NoGCPerFrame [UseOpenVR]
 
   -- Set up our cube resources
   cubeProg   <- createShaderProgram "app/jello.vert" "app/jello.frag"
@@ -105,7 +105,7 @@ main = do
     viewMat <- viewMatrixFromPose <$> use wldPlayer
     renderWith gamePal viewMat 
       (glClear (GL_COLOR_BUFFER_BIT .|. GL_DEPTH_BUFFER_BIT))
-      (render shapes )
+      (render shapes)
 
 render :: (MonadIO m, MonadState World m) 
        => Shapes Uniforms Uniforms 
