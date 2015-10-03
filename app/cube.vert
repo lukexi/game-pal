@@ -8,6 +8,7 @@
 uniform mat4 uModel;
 uniform mat4 uViewProjection;
 uniform mat4 uModelViewProjection;
+uniform mat4 uNormalMatrix;
 uniform mat4 uInverseModel;
 uniform vec3 uRepelPosition;
 uniform float uRepelStrength;
@@ -20,6 +21,7 @@ in      vec3 aTangent;
 out     vec3 vPosition;
 out     vec3 vNormal;
 out     vec3 vRepel;
+out     vec2 vUv;
 
 const float bufferDistance = 1.;
 const float distanceCutoff = .5;
@@ -109,8 +111,6 @@ void main() {
     // Pass some variables to the fragment shader
     vec3 pos = vec3(uModel * vec4(aPosition, 1.0));
 
-    
-
     // If scaled not uniformly, 
     // this will screw up ( i think ... )
     vNormal   = vec3(uModel * vec4(aNormal, 0.0));
@@ -118,8 +118,9 @@ void main() {
     float push = getDisplacement( vNormal , pos );
     
     vPosition = pos + push * vNormal;
+    vUv = aUV;
 
-    vNormal = vec3(uModel * vec4(getNormal( aNormal , aPosition , aTangent ),0.));
+    vNormal = vec3(uNormalMatrix * vec4(getNormal( aNormal , aPosition , aTangent ),0.));
     gl_Position = uViewProjection * vec4(vPosition, 1.0);
 
 }

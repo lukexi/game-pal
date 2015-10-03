@@ -7,6 +7,7 @@ uniform float uTime;
 in      vec3 vPosition;
 in      vec3 vNormal;
 in      vec3 vRepel;
+in      vec2 vUv;
 
 out     vec4 fragColor;
 
@@ -39,4 +40,6 @@ void main() {
 
    // fragColor = vec4( normalize( vRepel ) / length( vRepel ) , 1. );
     fragColor = vec4( vNormal * .5 + .5 , 1. );// * sin( uTime * 6.28);
+
+    fragColor = vec4( sin( vUv.x) , 0.  , 0. , 1.);
 }

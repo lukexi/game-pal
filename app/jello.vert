@@ -15,6 +15,7 @@ in      vec3 aTangent;
 out     vec3 vPosition;
 out     vec3 vNormal;
 out     vec3 vRepel;
+out     vec2 vUV;
 
 void main() {
 
@@ -34,6 +35,7 @@ void main() {
     // If scaled not uniformly, 
     // this will screw up ( i think ... )
     vNormal   = vec3(uModel * vec4(aNormal, 0.0));
+    vUV = aUV;
 
     gl_Position = uViewProjection * vec4(vPosition, 1.0);
 

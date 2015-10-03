@@ -15,7 +15,7 @@ import Control.Lens
 import Data.Data
 import Data.Maybe
 
--- import Halive.Utils
+import Halive.Utils
 
 data Cube = Cube
   { _cubPose :: !(Pose GLfloat)
@@ -40,6 +40,7 @@ makeLenses ''World
 data Uniforms = Uniforms
   { uModelViewProjection :: UniformLocation (M44 GLfloat)
   , uViewProjection      :: UniformLocation (M44 GLfloat)
+  , uNormalMatrix        :: UniformLocation (M44 GLfloat)
   , uInverseModel        :: UniformLocation (M44 GLfloat)
   , uModel               :: UniformLocation (M44 GLfloat)
   , uCamera              :: UniformLocation (V3  GLfloat)
@@ -52,16 +53,16 @@ data Uniforms = Uniforms
 main :: IO ()
 main = do
 
-  gamePal@GamePal{..} <- initGamePal "GamePal" GCPerFrame []
+  gamePal@GamePal{..} <- reacquire 0 $ initGamePal "GamePal" NoGCPerFrame []
 
   -- Set up our cube resources
-  cubeProg   <- createShaderProgram "app/cube.vert" "app/cube.frag"
-  cubeGeo    <- cubeGeometry (2 :: V3 GLfloat) (V3 30 30 30)
+  cubeProg   <- createShaderProgram "app/jello.vert" "app/jello.frag"
+  cubeGeo    <- icosahedronGeometry 1 5  --cubeGeometry (2 :: V3 GLfloat) (V3 30 30 30)
   cubeShape  <- makeShape cubeGeo cubeProg
 
   -- Set up our marker resources
   markerProg   <- createShaderProgram "app/marker.vert" "app/marker.frag"
-  markerGeo    <- icosahedronGeometry 0.1 1
+  markerGeo    <- icosahedronGeometry 0.1 2
   markerShape  <- makeShape markerGeo markerProg--markerGeo markerProg
 
 
@@ -71,6 +72,7 @@ main = do
 
   glEnable GL_DEPTH_TEST
   glClearColor 0 0 0.1 1
+  glEnable GL_CULL_FACE
 
   
 
@@ -79,7 +81,7 @@ main = do
 
             \x -> Cube 
               { _cubPose  = Pose { _posPosition    = V3 (x * 3) 0 0
-                                 , _posOrientation = axisAngle  ( normalize ( V3 (sin x)  1 (cos ( x * 4.3 )) )  ) x
+                                 , _posOrientation = axisAngle  ( normalize ( V3 (sin x)  1 (cos ( x * 4.3 )) )  ) 0
                                  }
 
               , _cubColor = hslColor (x/10) 1 0.5 1
@@ -136,7 +138,7 @@ render shapes projection viewMat = do
 
       let model = mkTransformation (obj ^. cubPose . posOrientation) (obj ^. cubPose . posPosition)
 
-      drawShape model projectionView cubeShape
+      drawShape model projection viewMat cubeShape
 
 
   useProgram (sProgram markerShape)
@@ -150,17 +152,18 @@ render shapes projection viewMat = do
   withVAO (sVAO markerShape) $ do
     let model = mkTransformation ( Quaternion 0 (V3 0 1 0) ) markerPos
 
-    drawShape model projectionView markerShape
+    drawShape model projection viewMat markerShape
 
-drawShape :: MonadIO m  => M44 GLfloat -> M44 GLfloat -> Shape Uniforms -> m ()
-drawShape model projectionView shape = do 
+drawShape :: MonadIO m  => M44 GLfloat -> M44 GLfloat -> M44 GLfloat ->  Shape Uniforms -> m ()
+drawShape model projection view shape = do 
 
   let Uniforms{..} = sUniforms shape
 
-  uniformM44 uViewProjection      (projectionView)
-  uniformM44 uModelViewProjection (projectionView !*! model)
+  uniformM44 uViewProjection      (projection !*! view)
+  uniformM44 uModelViewProjection (projection !*! view !*! model)
   uniformM44 uInverseModel        (fromMaybe model (inv44 model))
   uniformM44 uModel               model
+  uniformM44 uNormalMatrix        (transpose . safeInv44 $ view !*! model )
 
   let vc = vertCount (sGeometry shape)
   glDrawElements GL_TRIANGLES vc GL_UNSIGNED_INT nullPtr

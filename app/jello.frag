@@ -7,6 +7,7 @@ uniform float uTime;
 in      vec3 vPosition;
 in      vec3 vNormal;
 in      vec3 vRepel;
+in      vec2 vUV;
 
 out     vec4 fragColor;
 
@@ -35,8 +36,9 @@ void main() {
     vec3 diffuseLit = diffuseCoefficient * surfaceColor.rgb * lightColor;
 
 
-    fragColor = ( 1./length( vRepel )) *  vec4(diffuseLit, uDiffuse.a);
+    fragColor = vec4( vNormal * .5 + .5 , 1. ) *( 1./length( vRepel )) *  vec4(diffuseLit, uDiffuse.a);
 
+    //ragColor = vec4( vUV , 1. , 1. );
    // fragColor = vec4( normalize( vRepel ) / length( vRepel ) , 1. );
     //fragColor = vec4( vNormal * .5 + .5 , 1. ) * sin( uTime * 6.28);
 }
