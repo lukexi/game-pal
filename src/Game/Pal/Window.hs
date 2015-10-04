@@ -104,9 +104,9 @@ renderOculus hmd viewMat frameRenderFunc eyeRenderFunc = renderHMDFrame hmd $ \e
 renderOpenVR OpenVR{..} viewMat frameRenderFunc eyeRenderFunc = do
   poses <- waitGetPoses ovrCompositor
   
-  let (headPose, leftHandPose, rightHandPose) = case poses of
-        (head:controller1:controller2:xs) -> (safeInv44 head, controller1, controller2)
-        _                                 -> (identity, identity, identity)
+  let headPose = case poses of
+        (headPoseWorld:_) -> safeInv44 headPoseWorld
+        _        -> identity
 
   forM_ ovrEyes $ \EyeInfo{..} -> do
 
@@ -151,3 +151,21 @@ makeGetDelta  = do
 
   return getDelta
 
+
+
+
+getPoseForHMDType hmdType = case hmdType of
+  OculusHMD hmd -> getMaybeHMDPose (Just hmd)
+  OpenVRHMD openVR -> do
+    poses <- waitGetPoses (ovrCompositor openVR)
+    return $ if not (null poses) then head poses else identity
+  NoHMD -> return identity
+
+
+getMaybeHMDPose :: MonadIO m => Maybe HMD -> m (M44 GLfloat)
+getMaybeHMDPose maybeHMD = do
+  (headOrient, headPosit) <- maybe 
+    (return (axisAngle (V3 0 1 0) 0, V3 0 0 0)) 
+    (liftIO . getHMDPose . hmdInfo) 
+    maybeHMD
+  return (transformationFromPose (Pose headPosit headOrient))

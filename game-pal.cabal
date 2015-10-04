@@ -17,6 +17,7 @@ library
   hs-source-dirs:      src
   exposed-modules:     
     Game.Pal
+    Game.Pal.Hand
     Game.Pal.Movement
     Game.Pal.Types
     Game.Pal.View

@@ -18,7 +18,7 @@ import Data.Maybe
 import Halive.Utils
 
 data Cube = Cube
-  { _cubPose :: !(Pose GLfloat)
+  { _cubPose  :: !(Pose GLfloat)
   , _cubColor :: !(V4 GLfloat)
   }
 makeLenses ''Cube
@@ -52,7 +52,7 @@ data Uniforms = Uniforms
 
 main :: IO ()
 main = do
-
+  
   gamePal@GamePal{..} <- reacquire 0 $ initGamePal "GamePal" NoGCPerFrame [UseOpenVR]
 
   -- Set up our cube resources
@@ -65,20 +65,16 @@ main = do
   markerGeo    <- icosahedronGeometry 0.1 2
   markerShape  <- makeShape markerGeo markerProg--markerGeo markerProg
 
-
-  let shapes = Shapes{ _shpCube   = cubeShape
-                     , _shpMarker = markerShape
-                     }
+  let shapes = Shapes { _shpCube   = cubeShape
+                      , _shpMarker = markerShape
+                      }
 
   glEnable GL_DEPTH_TEST
   glClearColor 0 0 0.1 1
   glEnable GL_CULL_FACE
 
-  
-
   let world = World 
         { _wldCubes = flip map [-5..5] $ 
-
             \x -> Cube 
               { _cubPose  = Pose { _posPosition    = V3 (x * 3) 0 0
                                  , _posOrientation = axisAngle  ( normalize ( V3 (sin x)  1 (cos ( x * 4.3 )) )  ) 0
@@ -86,7 +82,7 @@ main = do
 
               , _cubColor = hslColor (x/10) 1 0.5 1
               }
-        , _wldPlayer = newPose {_posPosition = V3 0 0 5}
+        , _wldPlayer = newPose { _posPosition = V3 0 0 5 }
         , _wldTime = 0
         }
   void . flip runStateT world . whileWindow gpWindow $ do
@@ -94,7 +90,6 @@ main = do
 
     delta <- realToFrac <$> liftIO gpGetDelta
     wldTime += delta
-
 
     applyMouseLook gpWindow wldPlayer
     applyWASD gpWindow wldPlayer
