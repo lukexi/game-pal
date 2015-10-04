@@ -10,8 +10,10 @@ import Graphics.VR.OpenVR
 import Game.Pal.Types
 import Control.Monad
 
+type HandID = Int
 data Hand = Hand
-  { _hndMatrix   :: M44 GLfloat
+  { _hndID       :: HandID
+  , _hndMatrix   :: M44 GLfloat
   , _hndXY       :: V2 GLfloat  -- Touchpad on Vive
   , _hndTrigger  :: GLfloat
   , _hndGrip     :: GLfloat -- Grip on Vive, Grip on Oculus, Shoulder on Hydra
@@ -26,7 +28,8 @@ makeLenses ''Hand
 
 emptyHand :: Hand
 emptyHand = Hand
-  { _hndMatrix   = identity
+  { _hndID       = 0
+  , _hndMatrix   = identity
   , _hndXY       = 0
   , _hndTrigger  = 0
   , _hndGrip     = 0
@@ -43,7 +46,7 @@ getHands GamePal{..} = case gpHMD of
 
       hands <- forM (zip [0..] poses) $ \(i, pose) -> do
         buttonStates <- getControllerState ovrSystem i
-        return (handFromOpenVRController pose buttonStates)
+        return (handFromOpenVRController i pose buttonStates)
 
       return hands
 
@@ -52,8 +55,9 @@ getHands GamePal{..} = case gpHMD of
                gpSixenseBase
 
 
-handFromOpenVRController matrix (triggerState, gripState, startState) = emptyHand 
-  { _hndMatrix  = matrix 
+handFromOpenVRController i matrix (triggerState, gripState, startState) = emptyHand 
+  { _hndID      = fromIntegral i
+  , _hndMatrix  = matrix 
   , _hndTrigger = if triggerState then 1 else 0
   , _hndGrip    = if gripState then 1 else 0
   , _hndButtonS = startState
@@ -61,7 +65,8 @@ handFromOpenVRController matrix (triggerState, gripState, startState) = emptyHan
 
 handFromHydra :: Hydra.ControllerData -> Hand
 handFromHydra handData = emptyHand
-  { _hndMatrix = mkTransformation
+  { _hndID = if Hydra.whichHand handData == Hydra.LeftHand then 0 else 1
+  , _hndMatrix = mkTransformation
       (Hydra.rotQuat handData)
       ((position * hydraScale) + hydraOffset)
   , _hndXY      = V2 (deadzoneOf 0.05 $ Hydra.joystickX handData)
@@ -81,8 +86,8 @@ handFromHydra handData = emptyHand
     hydraScale = 1/500
     hydraOffset = V3 0 (-1) (-1)
 
-handsWorldPoses :: M44 GLfloat -> [Hand] -> [M44 GLfloat]
-handsWorldPoses player hands  = map ((!*! player) . (view hndMatrix)) hands
+handsToWorldPoses :: M44 GLfloat -> [Hand] -> [M44 GLfloat]
+handsToWorldPoses player hands  = map ((!*! player) . (view hndMatrix)) hands
 
 deadzoneOf :: (Num a, Ord a) => a -> a -> a
 deadzoneOf zone value = if abs value > zone then value else 0
