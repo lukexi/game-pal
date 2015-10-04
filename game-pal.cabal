@@ -50,6 +50,7 @@ executable game-pal
                      , mtl
                      , lens
                      , oculus-mini
+                     , hydra-hs
                      , halive
   default-language:    Haskell2010
 

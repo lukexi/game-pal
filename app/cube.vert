@@ -10,7 +10,8 @@ uniform mat4 uViewProjection;
 uniform mat4 uModelViewProjection;
 uniform mat4 uNormalMatrix;
 uniform mat4 uInverseModel;
-uniform vec3 uRepelPosition;
+uniform vec3 uRepelPosition1;
+uniform vec3 uRepelPosition2;
 uniform float uRepelStrength;
 
 in      vec3 aPosition;
@@ -23,9 +24,9 @@ out     vec3 vNormal;
 out     vec3 vRepel;
 out     vec2 vUv;
 
-const float bufferDistance = 1.;
-const float distanceCutoff = .5;
-const float maxDepth = 1.;
+const float bufferDistance = .5;
+const float distanceCutoff = .1;
+const float maxDepth = .2;
 
 float distanceToPlane( vec3 n , vec3 p1 , vec3 p2 , out vec3 perp , out vec3 para ){
   
@@ -46,7 +47,7 @@ float getDisplacement( vec3 norm , vec3 pos ){
   vec3 perp;
   vec3 para;
 
-  float d = distanceToPlane( vNormal , pos , uRepelPosition , perp , para );
+  float d = distanceToPlane( vNormal , pos , uRepelPosition1 , perp , para );
 
   if( d > 0. || d < -maxDepth){ d = 0.; }
 
@@ -72,7 +73,7 @@ vec3 getNormal( vec3 normal , vec3 position , vec3 tangent ){
   mNorm = normalize( mNorm );
 
   vec3 binormal = cross( normal , tangent );
-  float distance = .1;
+  float distance = .01;
 
   vec3 pUpX = position + distance * tangent;//vec3(   distance ,  0. , 0. );
   vec3 pDoX = position - distance * tangent;//vec3(  -distance ,  0. , 0. );
