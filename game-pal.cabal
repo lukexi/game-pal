@@ -17,7 +17,7 @@ library
   hs-source-dirs:      src
   exposed-modules:     
     Game.Pal
-    Game.Pal.Hand
+    Game.Pal.Hands
     Game.Pal.Movement
     Game.Pal.Types
     Game.Pal.View
@@ -48,11 +48,10 @@ executable game-pal
                      , glfw-pal
                      , gl-pal
                      , gl
-                     , linear
+                     , linear-extra
                      , mtl
-                     , lens
+                     , lens-extra
                      , oculus-mini
-                     , hydra-hs
                      , halive
   default-language:    Haskell2010
 

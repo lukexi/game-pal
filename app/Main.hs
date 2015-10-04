@@ -9,14 +9,14 @@ import Game.Pal
 import Graphics.UI.GLFW.Pal
 import Graphics.GL.Pal
 import Graphics.GL
-import Linear
+import Linear.Extra
 import Control.Monad.State
-import Control.Lens
+import Control.Lens.Extra
 import Data.Data
 import Data.Maybe
 
 import Halive.Utils
-import System.Hardware.Hydra
+
 data Cube = Cube
   { _cubPose  :: !(Pose GLfloat)
   , _cubColor :: !(V4 GLfloat)
@@ -34,7 +34,7 @@ data World = World
   { _wldCubes  :: ![Cube]
   , _wldPlayer :: !(Pose GLfloat)
   , _wldTime   :: !Float
-  , _wldHands  :: ![Pose GLfloat]
+  , _wldHands  :: ![Hand]
   }
 makeLenses ''World
 
@@ -58,10 +58,10 @@ main = do
   gamePal@GamePal{..} <- reacquire 0 $ initGamePal "GamePal" NoGCPerFrame [UseHydra,UseOpenVR]
 
   -- Set up our cube resources
-  cubeProg   <- createShaderProgram "app/jello.vert" "app/jello.frag"
-  cubeGeo    <- icosahedronGeometry 0.3 4  --cubeGeometry (2 :: V3 GLfloat) (V3 30 30 30)
+  cubeProg     <- createShaderProgram "app/jello.vert" "app/jello.frag"
+  cubeGeo      <- icosahedronGeometry 0.3 4  --cubeGeometry (2 :: V3 GLfloat) (V3 30 30 30)
   --cubeGeo    <- cubeGeometry (0.5 :: V3 GLfloat) (V3 100 100 100 )
-  cubeShape  <- makeShape cubeGeo cubeProg
+  cubeShape    <- makeShape cubeGeo cubeProg
 
   -- Set up our marker resources
   markerProg   <- createShaderProgram "app/marker.vert" "app/marker.frag"
@@ -87,7 +87,7 @@ main = do
               }
         , _wldPlayer = newPose { _posPosition = V3 0 0 2 }
         , _wldTime = 0
-        , _wldHands = [ newPose , newPose ]
+        , _wldHands = [ emptyHand , emptyHand ]
         }
   void . flip runStateT world . whileWindow gpWindow $ do
     --liftIO . print =<< liftIO gpGetDelta
@@ -96,18 +96,16 @@ main = do
     wldTime += delta
 
     applyMouseLook gpWindow wldPlayer
-    applyWASD gpWindow wldPlayer
+    applyWASD      gpWindow wldPlayer
+
     processEvents gpEvents $ \e -> do
       closeOnEscape gpWindow e
       applyGamepadJoystickMovement e wldPlayer
 
     -- Get latest Hydra data
-    hands <- maybe (return []) getHands gpSixenseBase
-    let handPoses = handsToPoses hands
-    wldHands .= handPoses
-   --
+    hands <- getHands gamePal
 
-
+    wldHands .= hands
     
     viewMat <- viewMatrixFromPose <$> use wldPlayer
     renderWith gamePal viewMat 
@@ -130,7 +128,7 @@ render shapes projection viewMat = do
       projectionView = projection !*! viewMat
       -- We extract eyePos from the view matrix to get Oculus offsets baked in
       eyePos = fromMaybe viewMat (inv44 viewMat) ^. translation
-  markerPositions <- map (^. posPosition) <$> use wldHands
+  markerPositions <- map (^. hndMatrix . translation) <$> use wldHands
 
   uniformV3 uCamera eyePos
   uniformF  uTime time
@@ -177,11 +175,3 @@ drawShape model projection view shape = do
 
   let vc = vertCount (sGeometry shape)
   glDrawElements GL_TRIANGLES vc GL_UNSIGNED_INT nullPtr
-
-
-handsToPoses :: [ControllerData] -> [(Pose GLfloat)]
-handsToPoses hands = map handPose hands
-  where handPose handData = Pose handPosit handOrient
-          where
-            handPosit   = fmap (realToFrac . (/500)) (pos handData) + V3 0 (-1) (-1)
-            handOrient  = rotQuat handData
