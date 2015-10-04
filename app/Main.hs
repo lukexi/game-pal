@@ -55,7 +55,7 @@ data Uniforms = Uniforms
 main :: IO ()
 main = do
 
-  gamePal@GamePal{..} <- reacquire 0 $ initGamePal "GamePal" NoGCPerFrame [UseHydra,UseOpenVR]
+  gamePal@GamePal{..} <- reacquire 0 $ initGamePal "GamePal" GCPerFrame [UseHydra,UseOpenVR]
 
   -- Set up our cube resources
   cubeProg     <- createShaderProgram "app/jello.vert" "app/jello.frag"
@@ -103,9 +103,8 @@ main = do
       applyGamepadJoystickMovement e wldPlayer
 
     -- Get latest Hydra data
-    hands <- getHands gamePal
-
-    wldHands .= hands
+    -- wldHands <~ getHands gamePal
+    wldHands .= [emptyHand, emptyHand]
     
     viewMat <- viewMatrixFromPose <$> use wldPlayer
     renderWith gamePal viewMat 
@@ -127,13 +126,13 @@ render shapes projection viewMat = do
   let Uniforms{..} = sUniforms cubeShape
       projectionView = projection !*! viewMat
       -- We extract eyePos from the view matrix to get Oculus offsets baked in
-      eyePos = fromMaybe viewMat (inv44 viewMat) ^. translation
+      eyePos = safeInv44 viewMat ^. translation
   markerPositions <- map (^. hndMatrix . translation) <$> use wldHands
 
   uniformV3 uCamera eyePos
   uniformF  uTime time
-  uniformV3 uRepelPosition1 (markerPositions !! 0)
-  uniformV3 uRepelPosition2 (markerPositions !! 1)
+  forM_ (zip [uRepelPosition1, uRepelPosition2] markerPositions) $ \(uRepelPosition, markerPosition) -> 
+    uniformV3 uRepelPosition markerPosition
   uniformF  uRepelStrength 0.5
 
   withVAO (sVAO cubeShape) $ do
@@ -169,7 +168,7 @@ drawShape model projection view shape = do
 
   uniformM44 uViewProjection      (projection !*! view)
   uniformM44 uModelViewProjection (projection !*! view !*! model)
-  uniformM44 uInverseModel        (fromMaybe model (inv44 model))
+  uniformM44 uInverseModel        (safeInv44 model)
   uniformM44 uModel               model
   uniformM44 uNormalMatrix        (transpose . safeInv44 $ view !*! model )
 

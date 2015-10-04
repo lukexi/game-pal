@@ -8,6 +8,7 @@ import Graphics.GL.Pal
 import qualified System.Hardware.Hydra as Hydra
 import Graphics.VR.OpenVR
 import Game.Pal.Types
+import Control.Monad
 
 data Hand = Hand
   { _hndMatrix   :: M44 GLfloat
@@ -37,22 +38,26 @@ emptyHand = Hand
   }
 
 getHands GamePal{..} = case gpHMD of
-    OpenVRHMD openVR -> do
-      poses <- waitGetPoses (ovrCompositor openVR)
-      
-      let (leftHandPose, rightHandPose) = case poses of
-            (_head:controller1:controller2:_xs) -> (controller1, controller2)
-            _                                   -> (identity, identity)
+    OpenVRHMD OpenVR{..} -> do
+      poses <- getDevicePosesOfClass ovrSystem TrackedDeviceClassController
 
-      return $ map handFromOpenVRController [leftHandPose, rightHandPose]
+      hands <- forM (zip [0..] poses) $ \(i, pose) -> do
+        buttonStates <- getControllerState ovrSystem i
+        return (handFromOpenVRController pose buttonStates)
 
+      return hands
 
     _ -> map handFromHydra <$> maybe (return []) 
                (Hydra.getHands) 
                gpSixenseBase
 
 
-handFromOpenVRController matrix = emptyHand { _hndMatrix = matrix }
+handFromOpenVRController matrix (triggerState, gripState, startState) = emptyHand 
+  { _hndMatrix  = matrix 
+  , _hndTrigger = if triggerState then 1 else 0
+  , _hndGrip    = if gripState then 1 else 0
+  , _hndButtonS = startState
+  }
 
 handFromHydra :: Hydra.ControllerData -> Hand
 handFromHydra handData = emptyHand

@@ -11,7 +11,7 @@ import Control.Monad.State
 import Control.Lens.Extra
 import System.Hardware.Hydra
 import Game.Pal.Types
-import Game.Pal.Hand
+import Game.Pal.Hands
 
 moveSpeed :: GLfloat
 moveSpeed = 0.01

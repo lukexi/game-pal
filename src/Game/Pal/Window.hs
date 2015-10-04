@@ -102,12 +102,8 @@ renderOculus hmd viewMat frameRenderFunc eyeRenderFunc = renderHMDFrame hmd $ \e
     eyeRenderFunc projection finalView 
 
 renderOpenVR OpenVR{..} viewMat frameRenderFunc eyeRenderFunc = do
-  poses <- waitGetPoses ovrCompositor
+  headPose <- safeInv44 <$> waitGetPoses ovrCompositor
   
-  let headPose = case poses of
-        (headPoseWorld:_) -> safeInv44 headPoseWorld
-        _        -> identity
-
   forM_ ovrEyes $ \EyeInfo{..} -> do
 
     withFramebuffer eiFramebuffer $ do
@@ -157,7 +153,7 @@ makeGetDelta  = do
 getPoseForHMDType hmdType = case hmdType of
   OculusHMD hmd -> getMaybeHMDPose (Just hmd)
   OpenVRHMD openVR -> do
-    poses <- waitGetPoses (ovrCompositor openVR)
+    poses <- getDevicePosesOfClass (ovrSystem openVR) TrackedDeviceClassHMD
     return $ if not (null poses) then head poses else identity
   NoHMD -> return identity
 
