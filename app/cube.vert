@@ -10,6 +10,7 @@ uniform mat4 uViewProjection;
 uniform mat4 uModelViewProjection;
 uniform mat4 uNormalMatrix;
 uniform mat4 uInverseModel;
+uniform vec3 uCamera;
 uniform vec3 uRepelPosition1;
 uniform vec3 uRepelPosition2;
 uniform float uRepelStrength;
@@ -19,14 +20,17 @@ in      vec3 aNormal;
 in      vec2 aUV;
 in      vec3 aTangent;
 
-out     vec3 vPosition;
-out     vec3 vNormal;
-out     vec3 vRepel;
-out     vec2 vUv;
+out vec3 vPos;
+out vec3 vLight1;
+out vec3 vLight2;
+out vec3 vNorm;
+out vec3 vCam;
+
+out vec2 vUv;
 
 const float bufferDistance = .5;
-const float distanceCutoff = .1;
-const float maxDepth = .2;
+const float distanceCutoff = .3;
+const float maxDepth = .5;
 
 float distanceToPlane( vec3 n , vec3 p1 , vec3 p2 , out vec3 perp , out vec3 para ){
   
@@ -47,7 +51,7 @@ float getDisplacement( vec3 norm , vec3 pos ){
   vec3 perp;
   vec3 para;
 
-  float d = distanceToPlane( vNormal , pos , uRepelPosition1 , perp , para );
+  float d = distanceToPlane( norm , pos , uRepelPosition1 , perp , para );
 
   if( d > 0. || d < -maxDepth){ d = 0.; }
 
@@ -114,14 +118,22 @@ void main() {
 
     // If scaled not uniformly, 
     // this will screw up ( i think ... )
-    vNormal   = vec3(uModel * vec4(aNormal, 0.0));
+    vec3 mNorm   = vec3(uModel * vec4(aNormal, 0.0));
 
-    float push = getDisplacement( vNormal , pos );
+    float push = getDisplacement( mNorm , pos );
     
-    vPosition = pos + push * vNormal;
+    vec3 mPosition = pos + push * mNorm;
+
     vUv = aUV;
 
-    vNormal = vec3(uNormalMatrix * vec4(getNormal( aNormal , aPosition , aTangent ),0.));
-    gl_Position = uViewProjection * vec4(vPosition, 1.0);
+    vPos = aPosition + push * aNormal;
+
+    vCam    = ( uInverseModel * vec4( uCamera , 1. ) ).xyz;
+    vLight1 = ( uInverseModel * vec4( uRepelPosition1 , 1. ) ).xyz;
+    vLight2 = ( uInverseModel * vec4( uRepelPosition2 , 1. ) ).xyz;
+
+    vNorm = getNormal( aNormal , aPosition , aTangent );
+
+    gl_Position = uViewProjection * vec4( mPosition, 1.0);
 
 }
