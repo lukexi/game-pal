@@ -16,7 +16,7 @@ data Hand = Hand
   , _hndMatrix   :: M44 GLfloat
   , _hndXY       :: V2 GLfloat  -- Touchpad on Vive
   , _hndTrigger  :: GLfloat
-  , _hndGrip     :: GLfloat -- Grip on Vive, Grip on Oculus, Shoulder on Hydra
+  , _hndGrip     :: Bool -- Grip on Vive, Grip on Oculus, Shoulder on Hydra
   , _hndButtonS  :: Bool -- Start button on Hydra
   , _hndButtonJ  :: Bool -- Joystick button on Hydra
   , _hndButtonA  :: Bool
@@ -32,7 +32,7 @@ emptyHand = Hand
   , _hndMatrix   = identity
   , _hndXY       = 0
   , _hndTrigger  = 0
-  , _hndGrip     = 0
+  , _hndGrip     = False
   , _hndButtonS  = False
   , _hndButtonA  = False
   , _hndButtonB  = False
@@ -55,12 +55,13 @@ getHands GamePal{..} = case gpHMD of
                gpSixenseBase
 
 
-handFromOpenVRController i matrix (triggerState, gripState, startState) = emptyHand 
+handFromOpenVRController i matrix (x, y, trigger, grip, start) = emptyHand 
   { _hndID      = fromIntegral i
   , _hndMatrix  = matrix 
-  , _hndTrigger = if triggerState then 1 else 0
-  , _hndGrip    = if gripState then 1 else 0
-  , _hndButtonS = startState
+  , _hndXY      = realToFrac <$> V2 x y
+  , _hndTrigger = realToFrac trigger 
+  , _hndGrip    = grip
+  , _hndButtonS = start
   }
 
 handFromHydra :: Hydra.ControllerData -> Hand
@@ -72,7 +73,7 @@ handFromHydra handData = emptyHand
   , _hndXY      = V2 (deadzoneOf 0.05 $ Hydra.joystickX handData)
                      (Hydra.joystickY handData)
   , _hndTrigger = Hydra.trigger handData
-  , _hndGrip    = if Hydra.ButtonBumper `elem` buttons then 1 else 0
+  , _hndGrip    = Hydra.ButtonBumper   `elem` buttons
   , _hndButtonS = Hydra.ButtonStart    `elem` buttons
   , _hndButtonJ = Hydra.ButtonJoystick `elem` buttons
   , _hndButtonA = Hydra.Button1        `elem` buttons
@@ -87,7 +88,7 @@ handFromHydra handData = emptyHand
     hydraOffset = V3 0 (-1) (-1)
 
 handsToWorldPoses :: M44 GLfloat -> [Hand] -> [M44 GLfloat]
-handsToWorldPoses player hands  = map ((!*! player) . (view hndMatrix)) hands
+handsToWorldPoses player hands  = map ((player !*!) . (view hndMatrix)) hands
 
 deadzoneOf :: (Num a, Ord a) => a -> a -> a
 deadzoneOf zone value = if abs value > zone then value else 0
