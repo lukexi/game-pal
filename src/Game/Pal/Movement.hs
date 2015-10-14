@@ -5,7 +5,6 @@
 module Game.Pal.Movement where
 import Linear.Extra
 import Graphics.GL
-import Graphics.Oculus
 import Graphics.UI.GLFW.Pal
 import Control.Monad.State
 import Control.Lens.Extra

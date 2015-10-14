@@ -1,9 +1,9 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE CPP #-}
 module Game.Pal.Window where
 import Graphics.UI.GLFW.Pal
-import Graphics.Oculus
 import Graphics.VR.OpenVR
 import Control.Monad
 import System.Hardware.Hydra
@@ -16,12 +16,8 @@ import System.Mem
 import Data.Time
 import Data.IORef
 
-
-oculusSupported :: Bool
-#if defined(mingw32_HOST_OS)
-oculusSupported = True
-#else
-oculusSupported = False
+#ifdef USE_OCULUS_SDK
+import Graphics.Oculus
 #endif
 
 initGamePal :: String -> GCPerFrame -> [GamePalDevices] -> IO GamePal
@@ -46,12 +42,14 @@ initGamePal windowName gcPerFrame devices = do
                 setWindowSize window (fromIntegral w) (fromIntegral h)
               _ -> return ()
             return (OpenVRHMD openVR)
+#ifdef USE_OCULUS_SDK
     | UseOculus `elem` devices && oculusSupported -> do
         hmd <- createHMD
         setWindowSize window 
           (fromIntegral . fst . hmdBufferSize $ hmd) 
           (fromIntegral . snd . hmdBufferSize $ hmd)
         return (OculusHMD hmd)
+#endif
     | otherwise -> return NoHMD
 
   getDelta <- makeGetDelta
@@ -76,32 +74,19 @@ renderWith GamePal{..} viewMat frameRenderFunc eyeRenderFunc = do
     NoHMD  -> do
       frameRenderFunc
       renderFlat gpWindow viewMat eyeRenderFunc
+    OpenVRHMD openVR -> do
+      renderOpenVR openVR viewMat frameRenderFunc eyeRenderFunc
+#ifdef USE_OCULUS_SDK
     OculusHMD hmd -> do
       renderOculus hmd viewMat frameRenderFunc eyeRenderFunc
       renderHMDMirror hmd
-    OpenVRHMD openVR -> do
-      renderOpenVR openVR viewMat frameRenderFunc eyeRenderFunc
-
+#endif
   -- We always call swapBuffers since mirroring is handled manually in 0.6+ and OpenVR
   swapBuffers gpWindow
   
   when (gpGCPerFrame == GCPerFrame) $ 
     liftIO performGC
 
-renderOculus :: MonadIO m 
-             => HMD
-             -> M44 GLfloat 
-             -> m ()
-             -> (M44 GLfloat -> M44 GLfloat -> m b) -> m ()
-renderOculus hmd viewMat frameRenderFunc eyeRenderFunc = renderHMDFrame hmd $ \eyeViews -> do
-  
-  frameRenderFunc
-  
-  renderHMDEyes eyeViews $ \projection eyeView -> do
-
-    let finalView = eyeView !*! viewMat
-
-    eyeRenderFunc projection finalView 
 
 renderOpenVR OpenVR{..} viewMat frameRenderFunc eyeRenderFunc = do
 
@@ -152,21 +137,34 @@ makeGetDelta  = do
 
   return getDelta
 
-
-
-
 getPoseForHMDType hmdType = case hmdType of
-  OculusHMD hmd -> getMaybeHMDPose (Just hmd)
   OpenVRHMD openVR -> do
     poses <- getDevicePosesOfClass (ovrSystem openVR) TrackedDeviceClassHMD
     return $ if not (null poses) then head poses else identity
   NoHMD -> return identity
+#ifdef USE_OCULUS_SDK
+  OculusHMD hmd -> liftIO . getHMDPose . hmdInfo $ hmd
+#endif
 
+recenterWhenOculus gamePal = case gpHMD gamePal of
+#ifdef USE_OCULUS_SDK
+  OculusHMD hmd -> liftIO $ recenterPose hmd
+#endif
+  _ -> return ()
 
-getMaybeHMDPose :: MonadIO m => Maybe HMD -> m (M44 GLfloat)
-getMaybeHMDPose maybeHMD = do
-  (headOrient, headPosit) <- maybe 
-    (return (axisAngle (V3 0 1 0) 0, V3 0 0 0)) 
-    (liftIO . getHMDPose . hmdInfo) 
-    maybeHMD
-  return (transformationFromPose (Pose headPosit headOrient))
+#ifdef USE_OCULUS_SDK
+renderOculus :: MonadIO m 
+             => HMD
+             -> M44 GLfloat 
+             -> m ()
+             -> (M44 GLfloat -> M44 GLfloat -> m b) -> m ()
+renderOculus hmd viewMat frameRenderFunc eyeRenderFunc = renderHMDFrame hmd $ \eyeViews -> do
+  
+  frameRenderFunc
+  
+  renderHMDEyes eyeViews $ \projection eyeView -> do
+
+    let finalView = eyeView !*! viewMat
+
+    eyeRenderFunc projection finalView 
+#endif
