@@ -61,13 +61,13 @@ main = do
 
   -- Set up our cube resources
   cubeProg     <- createShaderProgram "app/cube.vert" "app/logo.frag"
-  cubeGeo    <- cubeGeometry (0.5 :: V3 GLfloat) (V3 50 50 50 )
+  cubeGeo      <- cubeGeometry (0.5 :: V3 GLfloat) (V3 50 50 50 )
   cubeShape    <- makeShape cubeGeo cubeProg
 
 
-  jelloProg     <- createShaderProgram "app/jello.vert" "app/jello.frag"
-  jelloGeo      <- icosahedronGeometry 0.3 4  
-  jelloShape    <- makeShape jelloGeo jelloProg
+  jelloProg    <- createShaderProgram "app/jello.vert" "app/jello.frag"
+  jelloGeo     <- icosahedronGeometry 0.3 4  
+  jelloShape   <- makeShape jelloGeo jelloProg
 
 
   -- Set up our marker resources
@@ -106,7 +106,6 @@ main = do
         , _wldHands = [ emptyHand , emptyHand ]
         }
   void . flip runStateT world . whileWindow gpWindow $ do
-    --liftIO . print =<< liftIO gpGetDelta
 
     delta <- realToFrac <$> liftIO gpGetDelta
     wldTime += delta
@@ -122,7 +121,7 @@ main = do
     player <- use wldPlayer
     wldHands <~ getHands gamePal
     --wldHands .= [emptyHand, emptyHand]
-    
+
     viewMat <- viewMatrixFromPose <$> use wldPlayer
     renderWith gamePal viewMat 
       (glClear (GL_COLOR_BUFFER_BIT .|. GL_DEPTH_BUFFER_BIT))

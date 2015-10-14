@@ -43,7 +43,13 @@ initGamePal windowName gcPerFrame devices = do
     | UseOpenVR `elem` devices -> do
         mOpenVR <- createOpenVR
         case mOpenVR of
-          Just openVR -> return (OpenVRHMD openVR)
+          Just openVR -> do
+            forM_ (ovrEyes openVR) $ \eye -> case eiEye eye of
+              LeftEye -> do
+                let (_, _, w, h) = eiViewport eye
+                setWindowSize window (fromIntegral w) (fromIntegral h)
+              _ -> return ()
+            return (OpenVRHMD openVR)
     | UseOculus `elem` devices && oculusSupported -> do
         hmd <- createHMD
         setWindowSize window 
@@ -80,9 +86,9 @@ renderWith GamePal{..} viewMat frameRenderFunc eyeRenderFunc = do
       OpenVRHMD openVR -> do
         renderOpenVR openVR viewMat frameRenderFunc eyeRenderFunc
 
-  -- We always call swapBuffers since mirroring is handled independently in 0.6+
+  -- We always call swapBuffers since mirroring is handled manually in 0.6+ and OpenVR
   swapBuffers gpWindow
-  -- Commenting out temporarily because it breaks Halive:
+  
   when (gpGCPerFrame == GCPerFrame) $ 
     liftIO performGC
 
@@ -102,9 +108,10 @@ renderOculus hmd viewMat frameRenderFunc eyeRenderFunc = renderHMDFrame hmd $ \e
     eyeRenderFunc projection finalView 
 
 renderOpenVR OpenVR{..} viewMat frameRenderFunc eyeRenderFunc = do
+
   headPose <- safeInv44 <$> waitGetPoses ovrCompositor
   
-  forM_ ovrEyes $ \EyeInfo{..} -> do
+  forM_ ovrEyes $ \eye@EyeInfo{..} -> do
 
     withFramebuffer eiFramebuffer $ do
 
@@ -117,6 +124,8 @@ renderOpenVR OpenVR{..} viewMat frameRenderFunc eyeRenderFunc = do
       eyeRenderFunc eiProjection finalView
 
       submitFrameForEye ovrCompositor eiEye eiFramebufferTexture
+
+      mirrorOpenVREyeToWindow eye
 
 renderFlat :: MonadIO m 
            => Window -> M44 GLfloat -> (M44 GLfloat -> M44 GLfloat -> m b) -> m ()
