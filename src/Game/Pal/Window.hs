@@ -32,10 +32,6 @@ initGamePal windowName gcPerFrame devices = do
   let (resX, resY) = (2000, 1000)
   
   (window, events) <- createWindow windowName resX resY
-  -- Compensate for retina framebuffers on Mac
-  (frameW, frameH) <- getFramebufferSize window
-  when (frameW > resX && frameH > resY) $
-    setWindowSize window (resX `div` 2) (resY `div` 2)
 
   swapInterval 0
 
@@ -77,14 +73,14 @@ renderWith :: MonadIO m
            -> m ()
 renderWith GamePal{..} viewMat frameRenderFunc eyeRenderFunc = do
   case gpHMD of
-      NoHMD  -> do
-        frameRenderFunc
-        renderFlat gpWindow viewMat eyeRenderFunc
-      OculusHMD hmd -> do
-        renderOculus hmd viewMat frameRenderFunc eyeRenderFunc
-        renderHMDMirror hmd
-      OpenVRHMD openVR -> do
-        renderOpenVR openVR viewMat frameRenderFunc eyeRenderFunc
+    NoHMD  -> do
+      frameRenderFunc
+      renderFlat gpWindow viewMat eyeRenderFunc
+    OculusHMD hmd -> do
+      renderOculus hmd viewMat frameRenderFunc eyeRenderFunc
+      renderHMDMirror hmd
+    OpenVRHMD openVR -> do
+      renderOpenVR openVR viewMat frameRenderFunc eyeRenderFunc
 
   -- We always call swapBuffers since mirroring is handled manually in 0.6+ and OpenVR
   swapBuffers gpWindow
