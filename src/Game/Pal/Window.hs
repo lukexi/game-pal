@@ -23,7 +23,6 @@ import Graphics.Oculus
 initGamePal :: String -> GCPerFrame -> [GamePalDevices] -> IO GamePal
 initGamePal windowName gcPerFrame devices = do
   maybeSixenseBase <- if UseHydra `elem` devices then Just <$> initSixense else return Nothing
-
   
   let (resX, resY) = (2000, 1000)
   
