@@ -13,10 +13,15 @@ build-type:          Simple
 -- extra-source-files:  
 cabal-version:       >=1.10
 
+Flag UseOculusSDK
+  Description: Enable direct Oculus SDK support (rather than via SteamVR)
+  Default:     False
+
 library
   hs-source-dirs:      src
   exposed-modules:     
     Game.Pal
+    Game.Pal.Hands
     Game.Pal.Movement
     Game.Pal.Types
     Game.Pal.View
@@ -35,30 +40,50 @@ library
     random,
     containers,
     MonadRandom,
+    openvr-hs,
     time
+  if flag(UseOculusSDK)
+    build-depends:
+      oculus-mini
+    cpp-options: -DUSE_OCULUS_SDK
   default-language:    Haskell2010
   ghc-options:         -Wall -O2
   ghc-prof-options:    -Wall -O2 -fprof-auto
 
-executable game-pal
+executable example
   hs-source-dirs:      app
-  main-is:             Main.hs
+  main-is:             Example.hs
   ghc-options:         -Wall -O2 -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base
                      , game-pal
                      , glfw-pal
                      , gl-pal
                      , gl
-                     , linear
+                     , linear-extra
                      , mtl
-                     , lens
-                     , oculus-mini
+                     , lens-extra
                      , halive
                      , random
                      , containers
                      , MonadRandom
+                     , time
+                     
   default-language:    Haskell2010
 
+executable jello
+  hs-source-dirs:      app
+  main-is:             Jello.hs
+  ghc-options:         -Wall -O2 -threaded -rtsopts -with-rtsopts=-N
+  build-depends:       base
+                     , game-pal
+                     , glfw-pal
+                     , gl-pal
+                     , gl
+                     , linear-extra
+                     , mtl
+                     , lens-extra
+                     , halive
+  default-language:    Haskell2010
 
 source-repository head
   type:     git

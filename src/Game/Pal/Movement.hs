@@ -5,16 +5,16 @@
 module Game.Pal.Movement where
 import Linear.Extra
 import Graphics.GL
-import Graphics.Oculus
 import Graphics.UI.GLFW.Pal
 import Control.Monad.State
 import Control.Lens.Extra
 import System.Hardware.Hydra
+import Game.Pal.Types
+import Game.Pal.Hands
 
 moveSpeed :: GLfloat
 moveSpeed = 0.01
 
--- | These functions are all meant to be used with Control.Lens's 'zoom'
 applyMouseLook :: (MonadIO m, MonadState s m) => Window -> Lens' s (Pose GLfloat) -> m ()
 applyMouseLook win poseLens = do
   (x,y) <- getCursorPos win
@@ -42,25 +42,26 @@ applyWASD win poseLens = do
   whenKeyPressed win Key'Q           $ movePose poseLens (V3 0   pos 0  )
   whenKeyPressed win Key'E           $ movePose poseLens (V3 0   neg 0  )
 
-deadzoneOf :: (Num a, Ord a) => a -> a -> a
-deadzoneOf zone value = if abs value > zone then value else 0
 
-applyHydraJoystickMovement :: MonadState s m => [ControllerData] -> Lens' s (Pose GLfloat) -> m ()
-applyHydraJoystickMovement [left, right] poseLens = do
+applyHandJoystickMovement :: MonadState s m => [Hand] -> Lens' s (Pose GLfloat) -> m ()
+applyHandJoystickMovement [left, right] poseLens = do
   
   -- Move player forward/back/left/right with left joystick
   movePose poseLens $ V3 
-    (joystickX left / 10) 
+    ((left ^. hndXY . _x) / 10) 
     0 
-    (deadzoneOf 0.05 (-joystickY left / 10))
+    (-(left ^. hndXY . _y) / 10)
 
   -- Turn player left/right with right joystick
   -- (quat rotation must be rotation * original)
-  poseLens . posOrientation %= \old -> (axisAngle ( V3 0 1 0 ) (-joystickX right * moveSpeed)) * old
+  poseLens . posOrientation %= \old -> 
+    (axisAngle (V3 0 1 0) 
+               (-(right ^. hndXY . _x) * moveSpeed)) 
+    * old
   
   -- Move player down and up with left and right joystick clicks
-  when (ButtonJoystick `elem` handButtons left)  $ movePose poseLens ( V3 0 (-moveSpeed) 0  )
-  when (ButtonJoystick `elem` handButtons right) $ movePose poseLens ( V3 0   moveSpeed  0  )
+  when (left  ^. hndButtonJ) $ movePose poseLens ( V3 0 (-moveSpeed) 0  )
+  when (right ^. hndButtonJ) $ movePose poseLens ( V3 0   moveSpeed  0  )
 
 applyHydraJoystickMovement _ _ = return ()
 
@@ -71,23 +72,11 @@ applyGamepadJoystickMovement e poseLens = onGamepadAxes e $ \GamepadAllAxes{..} 
   poseLens . posOrientation %= \old -> 
     axisAngle ( V3 0 1 0 ) (-(realToFrac gaxRightStickY) * moveSpeed) * old
 
-handsToWorldPoses :: [ControllerData] -> (Pose GLfloat) -> [(Pose GLfloat)]
-handsToWorldPoses hands (Pose playerPos playerRot) = map handWorldPose hands
-  where handWorldPose handData = Pose positWorld orientWorld
-          where
-            handPosit   = fmap (realToFrac . (/500)) (pos handData) + V3 0 (-1) (-1)
-            handOrient  = rotQuat handData
-            positWorld  = rotate playerRot handPosit + playerPos
-            orientWorld = playerRot * handOrient
 
-getMaybeHMDPose :: MonadIO m => Maybe HMD -> m (Pose GLfloat)
-getMaybeHMDPose maybeHMD = do
-  (headOrient, headPosit) <- maybe 
-    (return (axisAngle (V3 0 1 0) 0, V3 0 0 0)) 
-    (liftIO . getHMDPose . hmdInfo) 
-    maybeHMD
-  return (Pose headPosit headOrient)
 
 onGamepadAxes :: Monad m => Event -> (GamepadAllAxes -> m ()) -> m ()
 onGamepadAxes (GamepadAxes axes@(GamepadAllAxes{})) a = a axes
 onGamepadAxes _                                     _ = return ()
+
+
+
