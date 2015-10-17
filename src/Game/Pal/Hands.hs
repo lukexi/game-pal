@@ -1,5 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TupleSections #-}
 module Game.Pal.Hands where
 import Control.Lens.Extra
 import Linear.Extra
@@ -35,13 +36,17 @@ emptyHand = Hand
   , _hndTrigger  = 0
   , _hndGrip     = False
   , _hndButtonS  = False
+  , _hndButtonJ  = False
   , _hndButtonA  = False
   , _hndButtonB  = False
   , _hndButtonC  = False
   , _hndButtonD  = False
   }
 
+data HandsType = HandsHydra | HandsVive deriving (Eq, Show, Ord)
+
 -- | Get the hands from OpenVR or Sixense
+getHands :: MonadIO m => GamePal -> m ([Hand], HandsType)
 getHands GamePal{..} = case gpHMD of
   OpenVRHMD OpenVR{..} -> do
     poses <- getDevicePosesOfClass ovrSystem TrackedDeviceClassController
@@ -52,12 +57,13 @@ getHands GamePal{..} = case gpHMD of
 
     -- Check for Hydras in case we're using SteamVR + Oculus
     if null hands
-      then handsFromHydra gpSixenseBase
-      else return hands
+      then (, HandsHydra) <$> handsFromHydra gpSixenseBase
+      else (, HandsVive)  <$> return hands
 
-  _ -> handsFromHydra gpSixenseBase
+  _ -> (, HandsHydra) <$> handsFromHydra gpSixenseBase
 
-
+handFromOpenVRController :: (Integral a, Real b) 
+                         => a -> M44 GLfloat -> (b, b, b, Bool, Bool) -> Hand
 handFromOpenVRController i matrix (x, y, trigger, grip, start) = emptyHand 
   { _hndID      = fromIntegral i
   , _hndMatrix  = matrix 
@@ -67,6 +73,7 @@ handFromOpenVRController i matrix (x, y, trigger, grip, start) = emptyHand
   , _hndButtonS = start
   }
 
+handsFromHydra :: MonadIO m => Maybe Hydra.SixenseBase -> m [Hand]
 handsFromHydra mSixenseBase = 
   map handFromHydra <$> 
     maybe (return []) 

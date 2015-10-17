@@ -119,7 +119,7 @@ main = do
 
     -- Get latest Hydra data
     player <- use wldPlayer
-    wldHands <~ getHands gamePal
+    wldHands <~ fst <$> getHands gamePal
     --wldHands .= [emptyHand, emptyHand]
 
     viewMat <- viewMatrixFromPose <$> use wldPlayer
