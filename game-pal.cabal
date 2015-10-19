@@ -67,7 +67,7 @@ executable example
                      , containers
                      , MonadRandom
                      , time
-                     
+
   default-language:    Haskell2010
 
 executable jello
@@ -83,6 +83,29 @@ executable jello
                      , mtl
                      , lens-extra
                      , halive
+  default-language:    Haskell2010
+
+
+executable catenary
+  hs-source-dirs:      app
+  main-is:             Catenary.hs
+  ghc-options:         -Wall -O2 -threaded -rtsopts -with-rtsopts=-N
+  build-depends:       base
+                     , game-pal
+                     , glfw-pal
+                     , gl-pal
+                     , gl
+                     , linear-extra
+                     , mtl
+                     , lens-extra
+                     , halive
+                     , random
+                     , containers
+                     , MonadRandom
+                     , time
+                     , lens
+                     , linear
+
   default-language:    Haskell2010
 
 source-repository head
