@@ -6,7 +6,7 @@ module Game.Pal.Window where
 import Graphics.UI.GLFW.Pal
 import Graphics.VR.OpenVR
 import Control.Monad
-import System.Hardware.Hydra
+import qualified System.Hardware.Hydra as Hydra
 import Control.Monad.Trans
 import Linear.Extra
 import Game.Pal.View
@@ -15,6 +15,7 @@ import Graphics.GL.Pal
 import System.Mem
 import Data.Time
 import Data.IORef
+import Game.Pal.Hands
 
 #ifdef USE_OCULUS_SDK
 import Graphics.Oculus
@@ -22,8 +23,17 @@ import Graphics.Oculus
 
 initGamePal :: String -> GCPerFrame -> [GamePalDevices] -> IO GamePal
 initGamePal windowName gcPerFrame devices = do
-  maybeSixenseBase <- if UseHydra `elem` devices then Just <$> initSixense else return Nothing
+  maybeSixenseBase <- if UseHydra `elem` devices 
+    then Just <$> Hydra.initSixense 
+    else return Nothing
   
+  -- FIXME: This is a terrible test and is totally wrong
+  -- if the user is using a gamepad + oculus.
+  -- But I haven't figured out
+  -- how to get "Is this a Vive?" out of OpenVR yet.
+  hands <- handsFromHydra maybeSixenseBase
+  let isRoomScale = if null hands then RoomScale else NotRoomScale
+
   let (resX, resY) = (2000, 1000)
   
   (window, events) <- createWindow windowName resX resY
@@ -59,7 +69,8 @@ initGamePal windowName gcPerFrame devices = do
     , gpHMD         = hmdType
     , gpSixenseBase = maybeSixenseBase
     , gpGetDelta    = getDelta
-    , gpGCPerFrame  = gcPerFrame
+    , gpGCPerFrame  = if gcPerFrame == GCPerFrame then True else False
+    , gpRoomScale   = isRoomScale
     }
 
 renderWith :: MonadIO m
@@ -83,7 +94,7 @@ renderWith GamePal{..} viewMat frameRenderFunc eyeRenderFunc = do
   -- We always call swapBuffers since mirroring is handled manually in 0.6+ and OpenVR
   swapBuffers gpWindow
   
-  when (gpGCPerFrame == GCPerFrame) $ 
+  when gpGCPerFrame $ 
     liftIO performGC
 
 

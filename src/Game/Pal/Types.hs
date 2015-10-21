@@ -8,9 +8,14 @@ import System.Hardware.Hydra
 import Data.Time
 import Graphics.VR.OpenVR
 
+-- | Passed to init to determine which devices to initialize
 data GamePalDevices = UseOpenVR | UseOculus | UseHydra deriving (Eq, Show, Ord)
 
+-- | Instructs game-pal to run a garbage collection after each frame render
 data GCPerFrame = GCPerFrame | NoGCPerFrame deriving (Eq, Show, Ord)
+
+-- | Indicates whether we're using the Vive or the Hydras
+data RoomScale = RoomScale | NotRoomScale deriving (Eq, Show, Ord)
 
 data HMDType = NoHMD 
              | OpenVRHMD OpenVR
@@ -24,6 +29,7 @@ data GamePal = GamePal
   , gpHMD         :: !HMDType
   , gpSixenseBase :: !(Maybe SixenseBase)
   , gpGetDelta    :: !(IO NominalDiffTime)
-  , gpGCPerFrame  :: !GCPerFrame
+  , gpGCPerFrame  :: !Bool
+  , gpRoomScale   :: !RoomScale
   }
 
