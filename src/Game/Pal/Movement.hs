@@ -39,8 +39,8 @@ applyWASD win poseLens = do
   whenKeyPressed win Key'S           $ movePose poseLens (V3 0   0   pos)
   whenKeyPressed win Key'A           $ movePose poseLens (V3 neg 0   0  )
   whenKeyPressed win Key'D           $ movePose poseLens (V3 pos 0   0  )
-  whenKeyPressed win Key'Q           $ movePose poseLens (V3 0   pos 0  )
-  whenKeyPressed win Key'E           $ movePose poseLens (V3 0   neg 0  )
+  whenKeyPressed win Key'Q           $ movePose poseLens (V3 0   neg 0  )
+  whenKeyPressed win Key'E           $ movePose poseLens (V3 0   pos 0  )
 
 
 applyHandJoystickMovement :: MonadState s m => [Hand] -> Lens' s (Pose GLfloat) -> m ()
