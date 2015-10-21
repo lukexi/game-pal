@@ -26,13 +26,6 @@ initGamePal windowName gcPerFrame devices = do
   maybeSixenseBase <- if UseHydra `elem` devices 
     then Just <$> Hydra.initSixense 
     else return Nothing
-  
-  -- FIXME: This is a terrible test and is totally wrong
-  -- if the user is using a gamepad + oculus.
-  -- But I haven't figured out
-  -- how to get "Is this a Vive?" out of OpenVR yet.
-  hands <- handsFromHydra maybeSixenseBase
-  let isRoomScale = if null hands then RoomScale else NotRoomScale
 
   let (resX, resY) = (2000, 1000)
   
@@ -40,7 +33,7 @@ initGamePal windowName gcPerFrame devices = do
 
   swapInterval 0
 
-  hmdType <- if 
+  (hmdType, isRoomScale) <- if 
     | UseOpenVR `elem` devices -> do
         mOpenVR <- createOpenVR
         case mOpenVR of
@@ -50,16 +43,18 @@ initGamePal windowName gcPerFrame devices = do
                 let (_, _, w, h) = eiViewport eye
                 setWindowSize window (fromIntegral w) (fromIntegral h)
               _ -> return ()
-            return (OpenVRHMD openVR)
+            roomScale <- isUsingLighthouse (ovrSystem openVR)
+            return (OpenVRHMD openVR, if roomScale then RoomScale else NotRoomScale)
+          Nothing -> return (NoHMD, NotRoomScale)
 #ifdef USE_OCULUS_SDK
     | UseOculus `elem` devices && oculusSupported -> do
         hmd <- createHMD
         setWindowSize window 
           (fromIntegral . fst . hmdBufferSize $ hmd) 
           (fromIntegral . snd . hmdBufferSize $ hmd)
-        return (OculusHMD hmd)
+        return (OculusHMD hmd, NotRoomScale)
 #endif
-    | otherwise -> return NoHMD
+    | otherwise -> return (NoHMD, NotRoomScale)
 
   getDelta <- makeGetDelta
 
