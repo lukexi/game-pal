@@ -4,7 +4,7 @@ uniform mat4 uModel;
 uniform mat4 uViewProjection;
 uniform mat4 uModelViewProjection;
 uniform mat4 uInverseModel;
-uniform vec3 uRepelPosition;
+uniform vec3 uRepelPosition1;
 uniform float uRepelStrength;
 
 uniform vec3 uStartPoint;
@@ -48,8 +48,8 @@ void main() {
 
     vLength = length( dir );
 
-    vec3 endPDown = uEndPoint - vec3( 1.5 , 0. , 0. ) - .1 * dir;
-    vec3 startPUp = uStartPoint + vec3( 1.5 , 0. , 0. )+ .1 * dir;
+    vec3 endPDown = uEndPoint - vec3( .2 , 0. , 0. ) - .1 * dir;
+    vec3 startPUp = uStartPoint + vec3( .2 , 0. , 0. )+ .1 * dir;
 
 
 

@@ -86,8 +86,8 @@ handFromHydra handData = emptyHand
   , _hndMatrix = mkTransformation
       (Hydra.rotQuat handData)
       ((position * hydraScale) + hydraOffset)
-  , _hndXY      = V2 (deadzoneOf 0.05 $ Hydra.joystickX handData)
-                     (Hydra.joystickY handData)
+  , _hndXY      = V2 (deadzoneOf 0.1 $ Hydra.joystickX handData)
+                     (deadzoneOf 0.1 $ Hydra.joystickY handData)
   , _hndTrigger = Hydra.trigger handData
   , _hndGrip    = Hydra.ButtonBumper   `elem` buttons
   , _hndButtonS = Hydra.ButtonStart    `elem` buttons

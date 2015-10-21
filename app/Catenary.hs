@@ -60,6 +60,7 @@ data World = World
   , _wldTouching :: !Int
   , _wldActiveLineID :: !ObjectID
   , _wldActiveLine :: !Int
+  , _wldHands  :: ![Hand]
   }
 makeLenses ''World
 
@@ -70,7 +71,8 @@ data Uniforms = Uniforms
   , uInverseModel        :: UniformLocation (M44 GLfloat)
   , uModel               :: UniformLocation (M44 GLfloat)
   , uCamera              :: UniformLocation (V3  GLfloat)
-  , uRepelPosition       :: UniformLocation (V3  GLfloat)
+  , uRepelPosition1      :: UniformLocation (V3  GLfloat)
+  , uRepelPosition2      :: UniformLocation (V3  GLfloat)
   , uStartPoint          :: UniformLocation (V3  GLfloat)
   , uEndPoint            :: UniformLocation (V3  GLfloat)
   , uRepelStrength       :: UniformLocation GLfloat
@@ -81,16 +83,16 @@ data Uniforms = Uniforms
 main :: IO ()
 main = do
 
-  gamePal@GamePal{..} <- reacquire 0 $ initGamePal "GamePal" NoGCPerFrame []
+  gamePal@GamePal{..} <- reacquire 0 $ initGamePal "Catenary"  GCPerFrame [UseOpenVR]
 
   -- Set up our cube resources
   cubeProg   <- createShaderProgram "app/jello.vert" "app/jello.frag"
-  cubeGeo    <- icosahedronGeometry 1 5  --cubeGeometry (2 :: V3 GLfloat) (V3 30 30 30)
+  cubeGeo    <- icosahedronGeometry 0.3 5  --cubeGeometry (2 :: V3 GLfloat) (V3 30 30 30)
   cubeShape  <- makeShape cubeGeo cubeProg
 
   -- Set up our marker resources
   markerProg   <- createShaderProgram "app/marker.vert" "app/marker.frag"
-  markerGeo    <- icosahedronGeometry 0.1 2
+  markerGeo    <- icosahedronGeometry 0.02 2
   markerShape  <- makeShape markerGeo markerProg--markerGeo markerProg
 
 
@@ -124,7 +126,7 @@ main = do
               , _cubColor = hslColor (x/10) 1 0.5 1
               }
         , _wldLines = mempty
-        , _wldPlayer = newPose {_posPosition = V3 0 0 5}
+        , _wldPlayer = newPose {_posPosition = V3 0 0 0}
 
         , _wldMarker = newPose {_posPosition = V3 3 2 3}
         , _wldTime = 0
@@ -138,6 +140,7 @@ main = do
               }
         , _wldActiveLineID = startRand
         , _wldActiveLine = 0
+        , _wldHands = [ emptyHand , emptyHand ]
         }
 
   void . flip runStateT world . whileWindow gpWindow $ do
@@ -148,11 +151,20 @@ main = do
 
     time <- use wldTime
 
+
+    -- Get latest Hydra data
+    player <- use wldPlayer
+    wldHands <~ fst <$> getHands gamePal
+
+    
+    handsWorld <- handsToWorldPoses (transformationFromPose player) <$> use wldHands
+    let markerPositions = map (^. translation) handsWorld
+
     let x = sin( time * 5 ) * 10
         y = cos( time * 3 ) * 4
         z = cos( time * 4 ) * 5
 
-    wldMarker .= newPose {_posPosition = V3 x y z }
+    wldMarker .= newPose {_posPosition = markerPositions !! 0 }
 
 
     applyMouseLook gpWindow wldPlayer
@@ -208,7 +220,7 @@ main = do
 
     -- If we are within a touching radius 
     -- and are not touching yet, than touch
-    if l < 4 && touch == 0 
+    if l < 0.3 && touch == 0 
       
       then do
         
@@ -326,9 +338,14 @@ render shapes projection viewMat = do
       eyePos = fromMaybe viewMat (inv44 viewMat) ^. translation
       markerPos = markerP
 
+  player <- use wldPlayer
+  handsWorld <- handsToWorldPoses (transformationFromPose player) <$> use wldHands
+  let markerPositions = map (^. translation) handsWorld
+
   uniformV3 uCamera eyePos
   uniformF  uTime time
-  uniformV3 uRepelPosition markerPos
+  forM_ (zip [uRepelPosition1, uRepelPosition2] markerPositions) $ \(uRepelPosition, markerPosition) -> 
+    uniformV3 uRepelPosition markerPosition
   uniformF  uRepelStrength 1
 
   withVAO (sVAO cubeShape) $ do
@@ -352,7 +369,7 @@ render shapes projection viewMat = do
 
   uniformV3 uCamera eyePos
   uniformF  uTime time
-  uniformV3 uRepelPosition markerPos
+  uniformV3 uRepelPosition1 markerPos
   uniformF  uRepelStrength 1
 
   closestCube <- use wldClosest
@@ -429,9 +446,9 @@ getLength v = sqrt $ ( v ^. _x * v ^. _x ) +  ( v ^. _y * v ^. _y ) +  ( v ^. _z
 
 getBasePoint i = position
 
-  where x = sin( i * 10 ) * 6
-        y = cos( i * 40 ) * 10
-        z = sin( i * 100 ) * 4
+  where x = sin( i * 10 ) * 2
+        y = cos( i * 40 ) * 2 + 2
+        z = sin( i * 100 ) * 2
         position = V3 x y z
 
 
