@@ -30,6 +30,11 @@ movePose poseLens vec = do
   orient <- use $ poseLens . posOrientation
   poseLens . posPosition += rotate orient vec
 
+turnPose :: MonadState s m => Lens' s (Pose GLfloat) -> Quaternion GLfloat -> m ()
+turnPose poseLens turn = 
+  -- Quat rotation must be rotation * original rather than vice versa
+  poseLens . posOrientation %= (turn *)
+
 applyWASD :: (MonadIO m, MonadState s m) => Window -> Lens' s (Pose GLfloat) -> m ()
 applyWASD win poseLens = do
   shiftDown <- (== KeyState'Pressed) <$> getKey win Key'LeftShift
@@ -53,11 +58,8 @@ applyHandJoystickMovement [left, right] poseLens = do
     (-(left ^. hndXY . _y) / 10)
 
   -- Turn player left/right with right joystick
-  -- (quat rotation must be rotation * original)
-  poseLens . posOrientation %= \old -> 
-    (axisAngle (V3 0 1 0) 
-               (-(right ^. hndXY . _x) * moveSpeed)) 
-    * old
+  turnPose poseLens $
+    axisAngle (V3 0 1 0) (-(right ^. hndXY . _x) * moveSpeed)
   
   -- Move player down and up with left and right joystick clicks
   when (left  ^. hndButtonJ) $ movePose poseLens ( V3 0 (-moveSpeed) 0  )
@@ -67,12 +69,11 @@ applyHydraJoystickMovement _ _ = return ()
 
 applyGamepadJoystickMovement :: MonadState s m => Event -> Lens' s (Pose GLfloat) -> m ()
 applyGamepadJoystickMovement e poseLens = onGamepadAxes e $ \GamepadAllAxes{..} -> do
-  movePose poseLens (V3 (realToFrac gaxLeftStickX / 10) 0 (realToFrac gaxLeftStickY / 10))
+  movePose poseLens $
+    V3 (realToFrac gaxLeftStickX / 10) 0 (realToFrac gaxLeftStickY / 10)
   -- Quat rotation must be rotation * original rather than vice versa
-  poseLens . posOrientation %= \old -> 
-    axisAngle ( V3 0 1 0 ) (-(realToFrac gaxRightStickY) * moveSpeed) * old
-
-
+  turnPose poseLens $
+    axisAngle (V3 0 1 0) (-(realToFrac gaxRightStickY) * moveSpeed)
 
 onGamepadAxes :: Monad m => Event -> (GamepadAllAxes -> m ()) -> m ()
 onGamepadAxes (GamepadAxes axes@(GamepadAllAxes{})) a = a axes
