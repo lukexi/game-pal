@@ -77,6 +77,8 @@ renderWith :: MonadIO m
 renderWith GamePal{..} viewMat frameRenderFunc eyeRenderFunc = do
   case gpHMD of
     NoHMD  -> do
+      (x,y,w,h) <- getWindowViewport gpWindow
+      glViewport x y w h
       frameRenderFunc
       renderFlat gpWindow viewMat eyeRenderFunc
     OpenVRHMD openVR -> do
