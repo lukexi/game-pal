@@ -2,27 +2,26 @@
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE CPP #-}
-module Game.Pal.Window where
+module Graphics.VR.Pal.Window where
 import Graphics.UI.GLFW.Pal
 import Graphics.VR.OpenVR
 import Control.Monad
 import qualified System.Hardware.Hydra as Hydra
 import Control.Monad.Trans
 import Linear.Extra
-import Game.Pal.View
-import Game.Pal.Types
+import Graphics.VR.Pal.Types
 import Graphics.GL.Pal
 import System.Mem
 import Data.Time
 import Data.IORef
-import Game.Pal.Hands
+import Graphics.VR.Pal.Hands
 
 #ifdef USE_OCULUS_SDK
 import Graphics.Oculus
 #endif
 
-initGamePal :: String -> GCPerFrame -> [GamePalDevices] -> IO GamePal
-initGamePal windowName gcPerFrame devices = do
+initVRPal :: String -> GCPerFrame -> [VRPalDevices] -> IO VRPal
+initVRPal windowName gcPerFrame devices = do
   maybeSixenseBase <- if UseHydra `elem` devices 
     then Just <$> Hydra.initSixense 
     else return Nothing
@@ -58,7 +57,7 @@ initGamePal windowName gcPerFrame devices = do
 
   getDelta <- makeGetDelta
 
-  return $ GamePal
+  return $ VRPal
     { gpWindow      = window
     , gpEvents      = events
     , gpHMD         = hmdType
@@ -69,12 +68,12 @@ initGamePal windowName gcPerFrame devices = do
     }
 
 renderWith :: MonadIO m
-           => GamePal
+           => VRPal
            -> M44 GLfloat
            -> m ()
            -> (M44 GLfloat -> M44 GLfloat -> m b)
            -> m ()
-renderWith GamePal{..} viewMat frameRenderFunc eyeRenderFunc = do
+renderWith VRPal{..} viewMat frameRenderFunc eyeRenderFunc = do
   case gpHMD of
     NoHMD  -> do
       (x,y,w,h) <- getWindowViewport gpWindow
@@ -119,7 +118,7 @@ renderFlat :: MonadIO m
            => Window -> M44 GLfloat -> (M44 GLfloat -> M44 GLfloat -> m b) -> m ()
 renderFlat win viewMat renderFunc = do
   
-  projection  <- makeProjection win
+  projection  <- getWindowProjection win 45 0.1 1000
   
   _ <- renderFunc projection viewMat
 

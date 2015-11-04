@@ -1,8 +1,8 @@
-name:                game-pal
+name:                vr-pal
 version:             0.1.0.0
-synopsis:            Utilities for unifying gl-pal, oculus-mini, hydra-hs, glfw-pal
+synopsis:            Utilities for unifying gl-pal, oculus-mini, hydra-hs, glfw-pal, openvr-hs
 description:         Please see README.md
-homepage:            http://github.com/lukexi/game-pal#readme
+homepage:            http://github.com/lukexi/vr-pal#readme
 license:             BSD3
 license-file:        LICENSE
 author:              Luke Iannini
@@ -20,12 +20,11 @@ Flag UseOculusSDK
 library
   hs-source-dirs:      src
   exposed-modules:     
-    Game.Pal
-    Game.Pal.Hands
-    Game.Pal.Movement
-    Game.Pal.Types
-    Game.Pal.View
-    Game.Pal.Window
+    Graphics.VR.Pal
+    Graphics.VR.Pal.Hands
+    Graphics.VR.Pal.Movement
+    Graphics.VR.Pal.Types
+    Graphics.VR.Pal.Window
   build-depends:
     base,
     binary,
@@ -50,12 +49,13 @@ library
   ghc-options:         -Wall -O2
   ghc-prof-options:    -Wall -O2 -fprof-auto
 
-executable example
+test-suite example
+  type: exitcode-stdio-1.0
   hs-source-dirs:      app
   main-is:             Example.hs
   ghc-options:         -Wall -O2 -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base
-                     , game-pal
+                     , vr-pal
                      , glfw-pal
                      , gl-pal
                      , gl
@@ -70,12 +70,13 @@ executable example
 
   default-language:    Haskell2010
 
-executable jello
+test-suite jello
+  type: exitcode-stdio-1.0
   hs-source-dirs:      app
   main-is:             Jello.hs
   ghc-options:         -Wall -O2 -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base
-                     , game-pal
+                     , vr-pal
                      , glfw-pal
                      , gl-pal
                      , gl
@@ -86,12 +87,13 @@ executable jello
   default-language:    Haskell2010
 
 
-executable catenary
+test-suite catenary
+  type: exitcode-stdio-1.0
   hs-source-dirs:      app
   main-is:             Catenary.hs
   ghc-options:         -Wall -O2 -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base
-                     , game-pal
+                     , vr-pal
                      , glfw-pal
                      , gl-pal
                      , gl
@@ -110,4 +112,4 @@ executable catenary
 
 source-repository head
   type:     git
-  location: https://github.com/lukexi/game-pal
+  location: https://github.com/lukexi/vr-pal

@@ -1,14 +1,14 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TupleSections #-}
-module Game.Pal.Hands where
+module Graphics.VR.Pal.Hands where
 import Control.Lens.Extra
 import Linear.Extra
 import Graphics.GL.Pal
 
 import qualified System.Hardware.Hydra as Hydra
 import Graphics.VR.OpenVR
-import Game.Pal.Types
+import Graphics.VR.Pal.Types
 import Control.Monad
 import Control.Monad.Trans
 
@@ -46,8 +46,8 @@ emptyHand = Hand
 data HandsType = HandsHydra | HandsVive deriving (Eq, Show, Ord)
 
 -- | Get the hands from OpenVR or Sixense
-getHands :: MonadIO m => GamePal -> m ([Hand], HandsType)
-getHands GamePal{..} = case gpHMD of
+getHands :: MonadIO m => VRPal -> m ([Hand], HandsType)
+getHands VRPal{..} = case gpHMD of
   OpenVRHMD OpenVR{..} -> do
     poses <- getDevicePosesOfClass ovrSystem TrackedDeviceClassController
 

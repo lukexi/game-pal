@@ -2,15 +2,15 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE RankNTypes #-}
-module Game.Pal.Movement where
+module Graphics.VR.Pal.Movement where
 import Linear.Extra
 import Graphics.GL
 import Graphics.UI.GLFW.Pal
 import Control.Monad.State
 import Control.Lens.Extra
 import System.Hardware.Hydra
-import Game.Pal.Types
-import Game.Pal.Hands
+import Graphics.VR.Pal.Types
+import Graphics.VR.Pal.Hands
 
 moveSpeed :: GLfloat
 moveSpeed = 0.01

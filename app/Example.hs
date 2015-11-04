@@ -5,7 +5,7 @@
 
 module Main where
 
-import Game.Pal
+import Graphics.VR.Pal
 import Graphics.UI.GLFW.Pal
 import Graphics.GL.Pal
 import Graphics.GL
@@ -18,7 +18,7 @@ import Halive.Utils
 main :: IO ()
 main = do
 
-  gamePal@GamePal{..} <- initGamePal "GamePal" GCPerFrame [UseOpenVR]
+  gamePal@VRPal{..} <- initVRPal "GamePal" GCPerFrame [UseOpenVR]
 
 
   glEnable GL_DEPTH_TEST

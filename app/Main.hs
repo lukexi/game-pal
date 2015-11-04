@@ -5,7 +5,7 @@
 
 module Main where
 
-import Game.Pal
+import Graphics.VR.Pal
 import Graphics.UI.GLFW.Pal
 import Graphics.GL.Pal
 import Graphics.GL
@@ -81,7 +81,7 @@ data Uniforms = Uniforms
 main :: IO ()
 main = do
 
-  gamePal@GamePal{..} <- reacquire 0 $ initGamePal "GamePal" NoGCPerFrame []
+  gamePal@VRPal{..} <- reacquire 0 $ initVRPal "VRPal" NoGCPerFrame []
 
   -- Set up our cube resources
   cubeProg   <- createShaderProgram "app/jello.vert" "app/jello.frag"
@@ -339,7 +339,7 @@ render shapes projection viewMat = do
 
       let model = mkTransformation (obj ^. cubPose . posOrientation) (obj ^. cubPose . posPosition)
 
-      drawShape model projection viewMat cubeShape
+      drawShape' model projection viewMat cubeShape
 
 
 
@@ -390,10 +390,10 @@ render shapes projection viewMat = do
   withVAO (sVAO markerShape) $ do
     let model = mkTransformation ( Quaternion 0 (V3 0 1 0) ) markerP
 
-    drawShape model projection viewMat markerShape
+    drawShape' model projection viewMat markerShape
 
-drawShape :: MonadIO m  => M44 GLfloat -> M44 GLfloat -> M44 GLfloat ->  Shape Uniforms -> m ()
-drawShape model projection view shape = do 
+drawShape' :: MonadIO m  => M44 GLfloat -> M44 GLfloat -> M44 GLfloat ->  Shape Uniforms -> m ()
+drawShape' model projection view shape = do 
 
   let Uniforms{..} = sUniforms shape
 
@@ -403,7 +403,7 @@ drawShape model projection view shape = do
   uniformM44 uModel               model
   uniformM44 uNormalMatrix        (transpose . safeInv44 $ view !*! model )
 
-  let vc = vertCount (sGeometry shape)
+  let vc = geoVertCount (sGeometry shape)
   glDrawElements GL_TRIANGLES vc GL_UNSIGNED_INT nullPtr
 
 
@@ -419,7 +419,7 @@ drawLine model projection view shape = do
   uniformM44 uModel               model
   uniformM44 uNormalMatrix        (transpose . safeInv44 $ view !*! model )
 
-  let vc = vertCount (sGeometry shape)
+  let vc = geoVertCount (sGeometry shape)
   glDrawElements GL_LINES vc GL_UNSIGNED_INT nullPtr
 
 
