@@ -35,7 +35,6 @@ library
     glfw-pal,
     gl-pal,
     hydra-hs,
-    oculus-mini,
     random,
     containers,
     MonadRandom,
