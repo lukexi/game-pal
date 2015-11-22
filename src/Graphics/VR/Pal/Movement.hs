@@ -8,7 +8,7 @@ import Graphics.GL
 import Graphics.UI.GLFW.Pal
 import Control.Monad.State
 import Control.Lens.Extra
-import System.Hardware.Hydra
+-- import System.Hardware.Hydra
 import Graphics.VR.Pal.Types
 import Graphics.VR.Pal.Hands
 

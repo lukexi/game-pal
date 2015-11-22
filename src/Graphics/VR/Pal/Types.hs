@@ -3,11 +3,17 @@
 module Graphics.VR.Pal.Types where
 
 import Graphics.UI.GLFW.Pal
-import System.Hardware.Hydra
+
 import Data.Time
 import Graphics.VR.OpenVR
 #ifdef USE_OCULUS_SDK
 import Graphics.Oculus
+#endif
+
+#ifdef USE_HYDRA_SDK
+import System.Hardware.Hydra
+#else
+data SixenseBase = SixenseBase
 #endif
 
 -- | Passed to init to determine which devices to initialize

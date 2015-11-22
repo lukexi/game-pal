@@ -6,7 +6,7 @@ module Graphics.VR.Pal.Window where
 import Graphics.UI.GLFW.Pal
 import Graphics.VR.OpenVR
 import Control.Monad
-import qualified System.Hardware.Hydra as Hydra
+
 import Control.Monad.Trans
 import Linear.Extra
 import Graphics.VR.Pal.Types
@@ -20,11 +20,19 @@ import Graphics.VR.Pal.Hands
 import Graphics.Oculus
 #endif
 
+#ifdef USE_HYDRA_SDK
+import qualified System.Hardware.Hydra as Hydra
+#endif
+
 initVRPal :: String -> GCPerFrame -> [VRPalDevices] -> IO VRPal
 initVRPal windowName gcPerFrame devices = do
+#ifdef USE_HYDRA_SDK
   maybeSixenseBase <- if UseHydra `elem` devices 
     then Just <$> Hydra.initSixense 
     else return Nothing
+#else
+  let maybeSixenseBase = Nothing
+#endif
 
   let (resX, resY) = (2000, 1000)
   

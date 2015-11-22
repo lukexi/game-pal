@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TupleSections #-}
@@ -6,11 +7,14 @@ import Control.Lens.Extra
 import Linear.Extra
 import Graphics.GL.Pal
 
-import qualified System.Hardware.Hydra as Hydra
 import Graphics.VR.OpenVR
 import Graphics.VR.Pal.Types
 import Control.Monad
 import Control.Monad.Trans
+
+#ifdef USE_HYDRA_SDK
+import qualified System.Hardware.Hydra as Hydra
+#endif
 
 type HandID = Int
 data Hand = Hand
@@ -73,6 +77,7 @@ handFromOpenVRController i matrix (x, y, trigger, grip, start) = emptyHand
   , _hndButtonS = start
   }
 
+#ifdef USE_HYDRA_SDK
 handsFromHydra :: MonadIO m => Maybe Hydra.SixenseBase -> m [Hand]
 handsFromHydra mSixenseBase = 
   map handFromHydra <$> 
@@ -102,6 +107,10 @@ handFromHydra handData = emptyHand
     buttons = Hydra.handButtons handData
     hydraScale = 1/500
     hydraOffset = V3 0 (-1) (-1)
+#else
+handsFromHydra :: MonadIO m => Maybe SixenseBase -> m [Hand]
+handsFromHydra = return . const []
+#endif
 
 handsToWorldPoses :: M44 GLfloat -> [Hand] -> [M44 GLfloat]
 handsToWorldPoses player hands  = map ((player !*!) . (view hndMatrix)) hands
