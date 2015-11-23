@@ -18,7 +18,7 @@ import Halive.Utils
 main :: IO ()
 main = do
 
-  gamePal@VRPal{..} <- initVRPal "GamePal" GCPerFrame [UseOpenVR]
+  vrPal@VRPal{..} <- initVRPal "VR Pal" GCPerFrame [UseOpenVR]
 
 
   glEnable GL_DEPTH_TEST
@@ -28,13 +28,13 @@ main = do
   whileWindow gpWindow $ do
 
 
-    hands <- getHands gamePal
+    hands <- getHands vrPal
 
     let viewMat = viewMatrixFromPose newPose
         pulse = do
           now <- (/ 2) . (+ 1) . sin . realToFrac . utctDayTime <$> getCurrentTime
           glClearColor 0.2 0.1 (now * 0.3) 1
-    renderWith gamePal viewMat 
+    renderWith vrPal viewMat 
       (pulse >> glClear (GL_COLOR_BUFFER_BIT .|. GL_DEPTH_BUFFER_BIT))
       (\projMat viewMat -> return ())
 

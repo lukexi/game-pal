@@ -42,7 +42,8 @@ initVRPal windowName gcPerFrame devices = do
 
   (hmdType, isRoomScale) <- if 
     | UseOpenVR `elem` devices -> do
-        mOpenVR <- createOpenVR
+        hmdPresent <- isHMDPresent
+        mOpenVR <- if hmdPresent then createOpenVR else return Nothing
         case mOpenVR of
           Just openVR -> do
             forM_ (ovrEyes openVR) $ \eye -> case eiEye eye of

@@ -81,7 +81,7 @@ data Uniforms = Uniforms
 main :: IO ()
 main = do
 
-  gamePal@VRPal{..} <- reacquire 0 $ initVRPal "VRPal" NoGCPerFrame []
+  vrPal@VRPal{..} <- reacquire 0 $ initVRPal "VRPal" NoGCPerFrame []
 
   -- Set up our cube resources
   cubeProg   <- createShaderProgram "app/jello.vert" "app/jello.frag"
@@ -299,7 +299,7 @@ main = do
 
     
     viewMat <- viewMatrixFromPose <$> use wldPlayer
-    renderWith gamePal viewMat 
+    renderWith vrPal viewMat 
       (glClear (GL_COLOR_BUFFER_BIT .|. GL_DEPTH_BUFFER_BIT))
       (render shapes )
 
