@@ -66,6 +66,11 @@ getHands VRPal{..} = case gpHMD of
 
   _ -> (, HandsHydra) <$> handsFromHydra gpSixenseBase
 
+triggerHandHapticPulse VRPal{..} controllerNumber axis duration = case gpHMD of
+  OpenVRHMD openVR -> 
+    triggerHapticPulse (ovrSystem openVR) controllerNumber axis duration
+  _ -> return ()
+
 handFromOpenVRController :: (Integral a, Real b) 
                          => a -> M44 GLfloat -> (b, b, b, Bool, Bool) -> Hand
 handFromOpenVRController i matrix (x, y, trigger, grip, start) = emptyHand 
