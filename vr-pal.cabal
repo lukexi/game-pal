@@ -38,7 +38,7 @@ library
     gl,
     glfw-pal,
     gl-pal,
-    
+    halive,
     random,
     containers,
     MonadRandom,

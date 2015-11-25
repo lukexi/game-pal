@@ -11,6 +11,7 @@ import Graphics.VR.OpenVR
 import Graphics.VR.Pal.Types
 import Control.Monad
 import Control.Monad.Trans
+import Foreign.C
 
 #ifdef USE_HYDRA_SDK
 import qualified System.Hardware.Hydra as Hydra
@@ -66,6 +67,7 @@ getHands VRPal{..} = case gpHMD of
 
   _ -> (, HandsHydra) <$> handsFromHydra gpSixenseBase
 
+triggerHandHapticPulse :: MonadIO m => VRPal -> CInt -> CInt -> CUShort -> m ()
 triggerHandHapticPulse VRPal{..} controllerNumber axis duration = case gpHMD of
   OpenVRHMD openVR -> 
     triggerHapticPulse (ovrSystem openVR) controllerNumber axis duration

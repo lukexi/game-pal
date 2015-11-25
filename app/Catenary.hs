@@ -83,7 +83,7 @@ data Uniforms = Uniforms
 main :: IO ()
 main = do
 
-  gamePal@VRPal{..} <- reacquire 0 $ initVRPal "Catenary"  GCPerFrame [UseOpenVR]
+  gamePal@VRPal{..} <- reacquire 0 $ initVRPal "Catenary" [UseOpenVR]
 
   -- Set up our cube resources
   cubeProg   <- createShaderProgram "app/jello.vert" "app/jello.frag"

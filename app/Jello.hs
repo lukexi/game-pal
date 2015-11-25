@@ -57,7 +57,7 @@ data Uniforms = Uniforms
 main :: IO ()
 main = do
 
-  gamePal@VRPal{..} <- reacquire 0 $ initVRPal "VRPal" GCPerFrame [UseOpenVR]
+  gamePal@VRPal{..} <- reacquire 0 $ initVRPal "VRPal" [UseOpenVR]
 
   -- Set up our cube resources
   cubeProg     <- createShaderProgram "app/cube.vert" "app/logo.frag"

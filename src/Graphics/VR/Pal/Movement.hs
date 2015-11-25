@@ -8,8 +8,6 @@ import Graphics.GL
 import Graphics.UI.GLFW.Pal
 import Control.Monad.State
 import Control.Lens.Extra
--- import System.Hardware.Hydra
-import Graphics.VR.Pal.Types
 import Graphics.VR.Pal.Hands
 
 moveSpeed :: GLfloat
@@ -65,7 +63,7 @@ applyHandJoystickMovement [left, right] poseLens = do
   when (left  ^. hndButtonJ) $ movePose poseLens ( V3 0 (-moveSpeed) 0  )
   when (right ^. hndButtonJ) $ movePose poseLens ( V3 0   moveSpeed  0  )
 
-applyHydraJoystickMovement _ _ = return ()
+applyHandJoystickMovement _ _ = return ()
 
 applyGamepadJoystickMovement :: MonadState s m => Event -> Lens' s (Pose GLfloat) -> m ()
 applyGamepadJoystickMovement e poseLens = onGamepadAxes e $ \GamepadAllAxes{..} -> do

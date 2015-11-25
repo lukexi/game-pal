@@ -18,7 +18,7 @@ import Halive.Utils
 main :: IO ()
 main = do
 
-  vrPal@VRPal{..} <- initVRPal "VR Pal" GCPerFrame [UseOpenVR]
+  vrPal@VRPal{..} <- initVRPal "VR Pal" [UseOpenVR]
 
 
   glEnable GL_DEPTH_TEST
