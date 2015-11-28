@@ -103,15 +103,16 @@ renderWith VRPal{..} viewMat frameRenderFunc eyeRenderFunc = do
       renderHMDMirror hmd
 #endif
   -- We always call swapBuffers since mirroring is handled manually in 0.6+ and OpenVR
-  swapBuffers gpWindow
+  -- profile "Swap" 0 $ swapBuffers gpWindow
   
-  when gpGCPerFrame $ 
-    liftIO performGC
+  -- when gpGCPerFrame $ 
+  --   profile "GC" 0 $ liftIO performGC
 
 
 renderOpenVR OpenVR{..} viewMat frameRenderFunc eyeRenderFunc = do
 
   headPose <- safeInv44 <$> waitGetPoses ovrCompositor
+  let headView = headPose !*! viewMat
   
   forM_ ovrEyes $ \eye@EyeInfo{..} -> do
 
@@ -120,7 +121,7 @@ renderOpenVR OpenVR{..} viewMat frameRenderFunc eyeRenderFunc = do
       frameRenderFunc
       
       let (x, y, w, h) = eiViewport
-          finalView    = eiEyeHeadTrans !*! headPose !*! viewMat
+          finalView    = eiEyeHeadTrans !*! headView
       glViewport x y w h
 
       eyeRenderFunc eiProjection finalView
