@@ -8,12 +8,7 @@ module Main where
 import Graphics.VR.Pal
 import Graphics.UI.GLFW.Pal
 import Graphics.GL.Pal
-import Graphics.GL
-import Linear.Extra
-import Data.Maybe
 import Data.Time
-
-import Halive.Utils
 
 main :: IO ()
 main = do
@@ -26,7 +21,6 @@ main = do
   glEnable GL_CULL_FACE
 
   whileWindow gpWindow $ do
-
 
     hands <- getHands vrPal
 

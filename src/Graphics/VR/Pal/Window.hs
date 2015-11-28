@@ -11,7 +11,7 @@ import Control.Monad.Trans
 import Linear.Extra
 import Graphics.VR.Pal.Types
 import Graphics.GL.Pal
-import System.Mem
+-- import System.Mem
 import Data.Time
 import Data.IORef
 import Graphics.VR.Pal.Hands
@@ -40,7 +40,7 @@ initVRPal windowName devices = do
   let maybeSixenseBase = Nothing
 #endif
 
-  let (resX, resY) = (2000, 1000)
+  let (resX, resY) = (500, 400)
   
   (window, events) <- createWindow windowName resX resY
 
@@ -52,11 +52,18 @@ initVRPal windowName devices = do
         mOpenVR <- if hmdPresent then createOpenVR else return Nothing
         case mOpenVR of
           Just openVR -> do
+            showMirrorWindow (ovrCompositor openVR)
             forM_ (ovrEyes openVR) $ \eye -> case eiEye eye of
               LeftEye -> do
                 let (_, _, w, h) = eiViewport eye
-                setWindowSize window (fromIntegral w) (fromIntegral h)
+                -- setWindowSize window (fromIntegral w `div` 2) (fromIntegral h `div` 2)
+                return ()
               _ -> return ()
+
+            -- Clear and hide the Infinitybox window
+            glClear GL_COLOR_BUFFER_BIT
+            iconifyWindow window
+
             roomScale <- isUsingLighthouse (ovrSystem openVR)
             return (OpenVRHMD openVR, if roomScale then RoomScale else NotRoomScale)
           Nothing -> return (NoHMD, NotRoomScale)
