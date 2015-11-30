@@ -102,6 +102,7 @@ renderWith VRPal{..} viewMat frameRenderFunc eyeRenderFunc = do
       glViewport x y w h
       frameRenderFunc
       renderFlat gpWindow viewMat eyeRenderFunc
+      swapBuffers gpWindow
     OpenVRHMD openVR -> do
       renderOpenVR openVR viewMat frameRenderFunc eyeRenderFunc
 #ifdef USE_OCULUS_SDK
