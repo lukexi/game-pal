@@ -14,7 +14,6 @@ import Graphics.GL.Pal
 -- import System.Mem
 import Data.Time
 import Data.IORef
-import Graphics.VR.Pal.Hands
 import Halive.Utils
 
 #ifdef USE_OCULUS_SDK
@@ -27,6 +26,11 @@ import qualified System.Hardware.Hydra as Hydra
 
 initVRPal :: String -> [VRPalDevices] -> IO VRPal
 initVRPal windowName devices = do
+
+  -- This helped in OpenVR SDK 0.9.10, where it seemed like calling swapBuffers
+  -- during mirroring was still causing a VSync even with swapInterval set to 0,
+  -- causing a ton of dropped frames
+  let useSDKMirror = False
 
   -- Turn off garbage collection per frame when Halive is active, 
   -- as it grinds things to a halt (I don't know why)
@@ -52,17 +56,19 @@ initVRPal windowName devices = do
         mOpenVR <- if hmdPresent then createOpenVR else return Nothing
         case mOpenVR of
           Just openVR -> do
-            showMirrorWindow (ovrCompositor openVR)
-            forM_ (ovrEyes openVR) $ \eye -> case eiEye eye of
-              LeftEye -> do
-                let (_, _, w, h) = eiViewport eye
-                -- setWindowSize window (fromIntegral w `div` 2) (fromIntegral h `div` 2)
-                return ()
-              _ -> return ()
-
-            -- Clear and hide the Infinitybox window
-            glClear GL_COLOR_BUFFER_BIT
-            iconifyWindow window
+            -- 
+            if useSDKMirror
+              then do
+                showMirrorWindow (ovrCompositor openVR)
+                -- Clear and hide the application window, as we don't display to it
+                glClear GL_COLOR_BUFFER_BIT
+                iconifyWindow window
+              else forM_ (ovrEyes openVR) $ \eye -> case eiEye eye of
+                LeftEye -> do
+                  let (_, _, w, h) = eiViewport eye
+                  setWindowSize window (fromIntegral w `div` 2) (fromIntegral h `div` 2)
+                  return ()
+                _ -> return ()
 
             roomScale <- isUsingLighthouse (ovrSystem openVR)
             return (OpenVRHMD openVR, if roomScale then RoomScale else NotRoomScale)
@@ -79,14 +85,15 @@ initVRPal windowName devices = do
 
   getDelta <- makeGetDelta
 
-  return $ VRPal
-    { gpWindow      = window
-    , gpEvents      = events
-    , gpHMD         = hmdType
-    , gpSixenseBase = maybeSixenseBase
-    , gpGetDelta    = getDelta
-    , gpGCPerFrame  = doGCPerFrame
-    , gpRoomScale   = isRoomScale
+  return VRPal
+    { gpWindow       = window
+    , gpEvents       = events
+    , gpHMD          = hmdType
+    , gpSixenseBase  = maybeSixenseBase
+    , gpGetDelta     = getDelta
+    , gpGCPerFrame   = doGCPerFrame
+    , gpRoomScale    = isRoomScale
+    , gpUseSDKMirror = case hmdType of { NoHMD -> False; _ -> useSDKMirror }
     }
 
 renderWith :: MonadIO m
@@ -102,7 +109,6 @@ renderWith VRPal{..} viewMat frameRenderFunc eyeRenderFunc = do
       glViewport x y w h
       frameRenderFunc
       renderFlat gpWindow viewMat eyeRenderFunc
-      swapBuffers gpWindow
     OpenVRHMD openVR -> do
       renderOpenVR openVR viewMat frameRenderFunc eyeRenderFunc
 #ifdef USE_OCULUS_SDK
@@ -111,12 +117,18 @@ renderWith VRPal{..} viewMat frameRenderFunc eyeRenderFunc = do
       renderHMDMirror hmd
 #endif
   -- We always call swapBuffers since mirroring is handled manually in 0.6+ and OpenVR
-  -- profile "Swap" 0 $ swapBuffers gpWindow
+  when (not gpUseSDKMirror) $
+    swapBuffers gpWindow
   
   -- when gpGCPerFrame $ 
   --   profile "GC" 0 $ liftIO performGC
 
-
+renderOpenVR :: (MonadIO m) 
+             => OpenVR
+             -> M44 GLfloat
+             -> m a
+             -> (M44 GLfloat -> M44 GLfloat -> m a1)
+             -> m ()
 renderOpenVR OpenVR{..} viewMat frameRenderFunc eyeRenderFunc = do
 
   headPose <- inv44 <$> waitGetPoses ovrCompositor
@@ -126,13 +138,13 @@ renderOpenVR OpenVR{..} viewMat frameRenderFunc eyeRenderFunc = do
 
     withFramebuffer eiFramebuffer $ do
 
-      frameRenderFunc
+      _ <- frameRenderFunc
       
       let (x, y, w, h) = eiViewport
           finalView    = eiEyeHeadTrans !*! headView
       glViewport x y w h
 
-      eyeRenderFunc eiProjection finalView
+      _ <- eyeRenderFunc eiProjection finalView
 
       submitFrameForEye ovrCompositor eiEye eiFramebufferTexture
 
@@ -167,6 +179,7 @@ makeGetDelta  = do
 
   return getDelta
 
+getPoseForHMDType :: (Fractional a, MonadIO m) => HMDType -> m (M44 a)
 getPoseForHMDType hmdType = case hmdType of
   OpenVRHMD openVR -> do
     poses <- getDevicePosesOfClass (ovrSystem openVR) TrackedDeviceClassHMD
@@ -176,6 +189,7 @@ getPoseForHMDType hmdType = case hmdType of
   OculusHMD hmd -> liftIO . getHMDPose . hmdInfo $ hmd
 #endif
 
+recenterWhenOculus :: Monad m => VRPal -> m ()
 recenterWhenOculus gamePal = case gpHMD gamePal of
 #ifdef USE_OCULUS_SDK
   OculusHMD hmd -> liftIO $ recenterPose hmd

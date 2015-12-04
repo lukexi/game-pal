@@ -32,12 +32,13 @@ data HMDType = NoHMD
 #endif
 
 data VRPal = VRPal
-  { gpWindow      :: !Window
-  , gpEvents      :: !Events
-  , gpHMD         :: !HMDType
-  , gpSixenseBase :: !(Maybe SixenseBase)
-  , gpGetDelta    :: !(IO NominalDiffTime)
-  , gpGCPerFrame  :: !Bool
-  , gpRoomScale   :: !RoomScale
+  { gpWindow       :: !Window
+  , gpEvents       :: !Events
+  , gpHMD          :: !HMDType
+  , gpSixenseBase  :: !(Maybe SixenseBase)
+  , gpGetDelta     :: !(IO NominalDiffTime)
+  , gpGCPerFrame   :: !Bool
+  , gpUseSDKMirror :: !Bool
+  , gpRoomScale    :: !RoomScale
   }
 
