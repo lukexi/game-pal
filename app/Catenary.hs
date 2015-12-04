@@ -418,7 +418,7 @@ drawShape' model projection view shape = do
   uniformM44 uModelViewProjection (projection !*! view !*! model)
   uniformM44 uInverseModel        (fromMaybe model (inv44 model))
   uniformM44 uModel               model
-  uniformM44 uNormalMatrix        (transpose . safeInv44 $ view !*! model )
+  uniformM44 uNormalMatrix        (transpose . inv44 $ view !*! model )
 
   let vc = geoVertCount (sGeometry shape)
   glDrawElements GL_TRIANGLES vc GL_UNSIGNED_INT nullPtr
@@ -434,7 +434,7 @@ drawLine model projection view shape = do
   uniformM44 uModelViewProjection (projection !*! view !*! model)
   uniformM44 uInverseModel        (fromMaybe model (inv44 model))
   uniformM44 uModel               model
-  uniformM44 uNormalMatrix        (transpose . safeInv44 $ view !*! model )
+  uniformM44 uNormalMatrix        (transpose . inv44 $ view !*! model )
 
   let vc = geoVertCount (sGeometry shape)
   glDrawElements GL_LINES vc GL_UNSIGNED_INT nullPtr

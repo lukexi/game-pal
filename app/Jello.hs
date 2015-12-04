@@ -151,7 +151,7 @@ render shapes projection viewMat = do
   let Uniforms{..} = sUniforms cubeShape
       projectionView = projection !*! viewMat
       -- We extract eyePos from the view matrix to get Oculus offsets baked in
-      eyePos = safeInv44 viewMat ^. translation
+      eyePos = inv44 viewMat ^. translation
 
   player <- use wldPlayer
   handsWorld <- handsToWorldPoses (transformationFromPose player) <$> use wldHands
@@ -186,7 +186,7 @@ render shapes projection viewMat = do
   let Uniforms{..} = sUniforms jelloShape
       projectionView = projection !*! viewMat
       -- We extract eyePos from the view matrix to get Oculus offsets baked in
-      eyePos = safeInv44 viewMat ^. translation
+      eyePos = inv44 viewMat ^. translation
 
   player <- use wldPlayer
   handsWorld <- handsToWorldPoses (transformationFromPose player) <$> use wldHands
@@ -239,9 +239,9 @@ drawShape' model projection view shape = do
 
   uniformM44 uViewProjection      (projection !*! view)
   uniformM44 uModelViewProjection (projection !*! view !*! model)
-  uniformM44 uInverseModel        (safeInv44 model)
+  uniformM44 uInverseModel        (inv44 model)
   uniformM44 uModel               model
-  uniformM44 uNormalMatrix        (transpose . safeInv44 $ view !*! model )
+  uniformM44 uNormalMatrix        (transpose . inv44 $ view !*! model )
 
   let vc = geoVertCount (sGeometry shape)
   glDrawElements GL_TRIANGLES vc GL_UNSIGNED_INT nullPtr

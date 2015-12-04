@@ -119,7 +119,7 @@ renderWith VRPal{..} viewMat frameRenderFunc eyeRenderFunc = do
 
 renderOpenVR OpenVR{..} viewMat frameRenderFunc eyeRenderFunc = do
 
-  headPose <- safeInv44 <$> waitGetPoses ovrCompositor
+  headPose <- inv44 <$> waitGetPoses ovrCompositor
   let headView = headPose !*! viewMat
   
   forM_ ovrEyes $ \eye@EyeInfo{..} -> do
