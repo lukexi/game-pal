@@ -24,6 +24,8 @@ import Graphics.Oculus
 import qualified System.Hardware.Hydra as Hydra
 #endif
 
+
+
 initVRPal :: String -> [VRPalDevices] -> IO VRPal
 initVRPal windowName devices = do
 

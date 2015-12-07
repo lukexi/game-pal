@@ -124,3 +124,13 @@ handsToWorldPoses player hands  = map ((player !*!) . (view hndMatrix)) hands
 
 deadzoneOf :: (Num a, Ord a) => a -> a -> a
 deadzoneOf zone value = if abs value > zone then value else 0
+
+showHandKeyboard :: MonadIO m => VRPal -> m ()
+showHandKeyboard VRPal{..} = case gpHMD of
+  OpenVRHMD ovr -> showKeyboard
+  _ -> return ()
+
+hideHandKeyboard :: MonadIO m => VRPal -> m ()
+hideHandKeyboard VRPal{..} = case gpHMD of
+  OpenVRHMD ovr -> hideKeyboard
+  _ -> return ()
