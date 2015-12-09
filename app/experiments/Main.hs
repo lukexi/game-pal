@@ -34,11 +34,11 @@ makeLenses ''Cube
 
 
 data Line = Line
-  { _linPose        :: !(Pose GLfloat)
-  , _linStartPoint  :: !(V3 GLfloat)
-  , _linEndPoint    :: !(V3 GLfloat)
-  , _linColor       :: !(V4 GLfloat)
-  , _linActive      :: !Int
+  { _linPose       :: !(Pose GLfloat)
+  , _linStartPoint :: !(V3 GLfloat)
+  , _linEndPoint   :: !(V3 GLfloat)
+  , _linColor      :: !(V4 GLfloat)
+  , _linActive     :: !Int
   }
 makeLenses ''Line
 
@@ -51,15 +51,15 @@ makeLenses ''Shapes
 
 
 data World = World
-  { _wldCubes  :: ![Cube]
-  , _wldLines  :: !(Map ObjectID Line)
-  , _wldPlayer :: !(Pose GLfloat)
-  , _wldTime   :: !Float
-  , _wldClosest :: !Cube
-  , _wldMarker  :: !(Pose GLfloat)
-  , _wldTouching :: !Int
+  { _wldCubes        :: ![Cube]
+  , _wldLines        :: !(Map ObjectID Line)
+  , _wldPlayer       :: !(Pose GLfloat)
+  , _wldTime         :: !Float
+  , _wldClosest      :: !Cube
+  , _wldMarker       :: !(Pose GLfloat)
+  , _wldTouching     :: !Int
   , _wldActiveLineID :: !ObjectID
-  , _wldActiveLine :: !Int
+  , _wldActiveLine   :: !Int
   }
 makeLenses ''World
 

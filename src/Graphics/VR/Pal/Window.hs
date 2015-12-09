@@ -10,6 +10,7 @@ import Control.Monad
 import Control.Monad.Trans
 import Linear.Extra
 import Graphics.VR.Pal.Types
+import Graphics.VR.Pal.Hands
 import Graphics.GL.Pal
 -- import System.Mem
 import Data.Time
@@ -29,28 +30,19 @@ import qualified System.Hardware.Hydra as Hydra
 initVRPal :: String -> [VRPalDevices] -> IO VRPal
 initVRPal windowName devices = do
 
-  -- This helped in OpenVR SDK 0.9.10, where it seemed like calling swapBuffers
-  -- during mirroring was still causing a VSync even with swapInterval set to 0,
-  -- causing a ton of dropped frames
-  let useSDKMirror = False
+  -- Calling swapBuffers triggers a ton of dropped frames. Valve's
+  -- mirroring doesn't seem to trigger this problem.
+  let useSDKMirror = True
 
   -- Turn off garbage collection per frame when Halive is active, 
   -- as it grinds things to a halt (I don't know why)
   doGCPerFrame <- not <$> isHaliveActive
 
-#ifdef USE_HYDRA_SDK
-  maybeSixenseBase <- if UseHydra `elem` devices 
-    then Just <$> Hydra.initSixense 
-    else return Nothing
-#else
-  let maybeSixenseBase = Nothing
-#endif
-
   let (resX, resY) = (500, 400)
   
   (window, events) <- createWindow windowName resX resY
 
-  swapInterval 0
+  -- swapInterval 0
 
   (hmdType, isRoomScale) <- if 
     | UseOpenVR `elem` devices -> do
@@ -91,35 +83,58 @@ initVRPal windowName devices = do
     { gpWindow       = window
     , gpEvents       = events
     , gpHMD          = hmdType
-    , gpSixenseBase  = maybeSixenseBase
     , gpGetDelta     = getDelta
     , gpGCPerFrame   = doGCPerFrame
     , gpRoomScale    = isRoomScale
     , gpUseSDKMirror = case hmdType of { NoHMD -> False; _ -> useSDKMirror }
     }
 
+whileVR :: MonadIO m => VRPal -> (M44 GLfloat -> [Hand] -> m a) -> m ()
+whileVR VRPal{..} action = whileWindow gpWindow $ do
+  case gpHMD of
+    OpenVRHMD OpenVR{..} -> do
+      ovrPoses <- waitGetPoses ovrCompositor ovrSystem
+
+      let (headM44, handM44s) = case ovrPoses of
+            [headM44']                            -> (headM44', [])
+            [headM44', oneHandM44]                -> (headM44', [oneHandM44])
+            [headM44', leftHandM44, rightHandM44] -> (headM44', [leftHandM44, rightHandM44])
+            _                                    -> (identity, [])
+
+      hands <- forM (zip [0..] handM44s) $ \(i, handM44) -> do
+        buttonStates <- getControllerState ovrSystem i
+        return (handFromOpenVRController i handM44 buttonStates)
+      
+      action headM44 hands
+#ifdef USE_OCULUS_SDK
+    OculusHMD hmd -> 
+      headM44 <- liftIO (getHMDPose (hmdInfo hmd))
+      action headM44 []
+#endif
+    _ -> action identity []
+
 renderWith :: MonadIO m
            => VRPal
+           -> Pose GLfloat
            -> M44 GLfloat
            -> m ()
            -> (M44 GLfloat -> M44 GLfloat -> m b)
            -> m ()
-renderWith VRPal{..} viewMat frameRenderFunc eyeRenderFunc = do
+renderWith VRPal{..} playerPose headM44 frameRenderFunc eyeRenderFunc = do
   case gpHMD of
     NoHMD  -> do
       (x,y,w,h) <- getWindowViewport gpWindow
       glViewport x y w h
       frameRenderFunc
-      renderFlat gpWindow viewMat eyeRenderFunc
-    OpenVRHMD openVR -> do
-      renderOpenVR openVR viewMat frameRenderFunc eyeRenderFunc
+      renderFlat gpWindow playerPose eyeRenderFunc
+    OpenVRHMD openVR -> 
+      renderOpenVR openVR playerPose headM44 frameRenderFunc eyeRenderFunc gpUseSDKMirror
 #ifdef USE_OCULUS_SDK
-    OculusHMD hmd -> do
-      renderOculus hmd viewMat frameRenderFunc eyeRenderFunc
-      renderHMDMirror hmd
+    OculusHMD hmd -> 
+      renderOculus hmd playerPose frameRenderFunc eyeRenderFunc
 #endif
   -- We always call swapBuffers since mirroring is handled manually in 0.6+ and OpenVR
-  when (not gpUseSDKMirror) $
+  when (not gpUseSDKMirror) $ 
     swapBuffers gpWindow
   
   -- when gpGCPerFrame $ 
@@ -127,14 +142,14 @@ renderWith VRPal{..} viewMat frameRenderFunc eyeRenderFunc = do
 
 renderOpenVR :: (MonadIO m) 
              => OpenVR
+             -> Pose GLfloat
              -> M44 GLfloat
              -> m a
              -> (M44 GLfloat -> M44 GLfloat -> m a1)
+             -> Bool
              -> m ()
-renderOpenVR OpenVR{..} viewMat frameRenderFunc eyeRenderFunc = do
-
-  headPose <- inv44 <$> waitGetPoses ovrCompositor
-  let headView = headPose !*! viewMat
+renderOpenVR OpenVR{..} playerPose headM44 frameRenderFunc eyeRenderFunc useSDKMirror = do
+  let viewM44 = inv44 (headM44 !*! transformationFromPose playerPose)
   
   forM_ ovrEyes $ \eye@EyeInfo{..} -> do
 
@@ -143,24 +158,53 @@ renderOpenVR OpenVR{..} viewMat frameRenderFunc eyeRenderFunc = do
       _ <- frameRenderFunc
       
       let (x, y, w, h) = eiViewport
-          finalView    = eiEyeHeadTrans !*! headView
+          finalView    = eiEyeHeadTrans !*! viewM44
       glViewport x y w h
 
       _ <- eyeRenderFunc eiProjection finalView
 
       submitFrameForEye ovrCompositor eiEye eiFramebufferTexture
 
-      mirrorOpenVREyeToWindow eye
+      when (not useSDKMirror) $ 
+        mirrorOpenVREyeToWindow eye
+
+#ifdef USE_OCULUS_SDK
+renderOculus :: MonadIO m 
+             => HMD
+             -> Pose GLfloat 
+             -> m ()
+             -> (M44 GLfloat -> M44 GLfloat -> m b) -> m ()
+renderOculus hmd playerPose frameRenderFunc eyeRenderFunc = do
+  renderHMDFrame hmd $ \eyeViews -> do
+    frameRenderFunc
+    
+    renderHMDEyes eyeViews $ \projection eyeView -> do
+
+      let finalView = eyeView !*! viewMatrixFromPose playerPose
+
+      eyeRenderFunc projection finalView 
+  renderHMDMirror hmd
+#endif
 
 renderFlat :: MonadIO m 
-           => Window -> M44 GLfloat -> (M44 GLfloat -> M44 GLfloat -> m b) -> m ()
-renderFlat win viewMat renderFunc = do
+           => Window -> Pose GLfloat -> (M44 GLfloat -> M44 GLfloat -> m b) -> m ()
+renderFlat win playerPose renderFunc = do
   
   projection  <- getWindowProjection win 45 0.1 1000
   
-  _ <- renderFunc projection viewMat
+  _           <- renderFunc projection (viewMatrixFromPose playerPose)
 
   return ()
+
+recenterSeatedPose :: MonadIO m => VRPal -> m ()
+recenterSeatedPose gamePal = case gpHMD gamePal of
+#ifdef USE_OCULUS_SDK
+  OculusHMD hmd -> liftIO (recenterPose hmd)
+#endif
+  OpenVRHMD openVR -> resetSeatedZeroPose (ovrSystem openVR)
+  _ -> return ()
+
+
 
 makeGetDelta :: IO (IO NominalDiffTime)
 makeGetDelta  = do 
@@ -180,37 +224,3 @@ makeGetDelta  = do
         return diffTime 
 
   return getDelta
-
-getPoseForHMDType :: (Fractional a, MonadIO m) => HMDType -> m (M44 a)
-getPoseForHMDType hmdType = case hmdType of
-  OpenVRHMD openVR -> do
-    poses <- getDevicePosesOfClass (ovrSystem openVR) TrackedDeviceClassHMD
-    return $ if not (null poses) then head poses else identity
-  NoHMD -> return identity
-#ifdef USE_OCULUS_SDK
-  OculusHMD hmd -> liftIO . getHMDPose . hmdInfo $ hmd
-#endif
-
-recenterWhenOculus :: Monad m => VRPal -> m ()
-recenterWhenOculus gamePal = case gpHMD gamePal of
-#ifdef USE_OCULUS_SDK
-  OculusHMD hmd -> liftIO $ recenterPose hmd
-#endif
-  _ -> return ()
-
-#ifdef USE_OCULUS_SDK
-renderOculus :: MonadIO m 
-             => HMD
-             -> M44 GLfloat 
-             -> m ()
-             -> (M44 GLfloat -> M44 GLfloat -> m b) -> m ()
-renderOculus hmd viewMat frameRenderFunc eyeRenderFunc = renderHMDFrame hmd $ \eyeViews -> do
-  
-  frameRenderFunc
-  
-  renderHMDEyes eyeViews $ \projection eyeView -> do
-
-    let finalView = eyeView !*! viewMat
-
-    eyeRenderFunc projection finalView 
-#endif

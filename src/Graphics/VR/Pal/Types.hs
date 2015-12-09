@@ -5,24 +5,20 @@ module Graphics.VR.Pal.Types where
 import Graphics.UI.GLFW.Pal
 
 import Data.Time
+import Graphics.GL.Pal
 import Graphics.VR.OpenVR
+
 #ifdef USE_OCULUS_SDK
 import Graphics.Oculus
 #endif
 
-#ifdef USE_HYDRA_SDK
-import System.Hardware.Hydra
-#else
-data SixenseBase = SixenseBase
-#endif
-
 -- | Passed to init to determine which devices to initialize
-data VRPalDevices = UseOpenVR | UseOculus | UseHydra deriving (Eq, Show, Ord)
+data VRPalDevices = UseOpenVR | UseOculus deriving (Eq, Show, Ord)
 
 -- | Instructs vr-pal to run a garbage collection after each frame render
 data GCPerFrame = GCPerFrame | NoGCPerFrame deriving (Eq, Show, Ord)
 
--- | Indicates whether we're using the Vive or the Hydras
+-- | Indicates when we're using the Vive
 data RoomScale = RoomScale | NotRoomScale deriving (Eq, Show, Ord)
 
 data HMDType = NoHMD 
@@ -35,7 +31,6 @@ data VRPal = VRPal
   { gpWindow       :: !Window
   , gpEvents       :: !Events
   , gpHMD          :: !HMDType
-  , gpSixenseBase  :: !(Maybe SixenseBase)
   , gpGetDelta     :: !(IO NominalDiffTime)
   , gpGCPerFrame   :: !Bool
   , gpUseSDKMirror :: !Bool

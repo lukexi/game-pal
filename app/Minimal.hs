@@ -1,6 +1,4 @@
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE FlexibleContexts #-}
 
 module Main where
@@ -10,26 +8,21 @@ import Graphics.UI.GLFW.Pal
 import Graphics.GL.Pal
 import Data.Time
 
+getNow = realToFrac . utctDayTime <$> getCurrentTime
+
 main :: IO ()
 main = do
 
   vrPal@VRPal{..} <- initVRPal "VR Pal" [UseOpenVR]
+  
+  whileVR vrPal $ \headM44 hands -> do
 
-
-  glEnable GL_DEPTH_TEST
-  glClearColor 0 0 0.1 1
-  glEnable GL_CULL_FACE
-
-  whileWindow gpWindow $ do
-
-    hands <- getHands vrPal
-
-    let viewMat = viewMatrixFromPose newPose
-        pulse = do
-          now <- (/ 2) . (+ 1) . sin . realToFrac . utctDayTime <$> getCurrentTime
+    let pulse = do
+          now <- (/ 2) . (+ 1) . sin <$> getNow
           glClearColor 0.2 0.1 (now * 0.3) 1
-    renderWith vrPal viewMat 
+
+    renderWith vrPal newPose headM44  
       (pulse >> glClear (GL_COLOR_BUFFER_BIT .|. GL_DEPTH_BUFFER_BIT))
-      (\projMat viewMat -> return ())
+      (\projMat viewM44 -> return ())
 
     processEvents gpEvents $ \e -> closeOnEscape gpWindow e

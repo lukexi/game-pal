@@ -48,25 +48,6 @@ emptyHand = Hand
   , _hndButtonD  = False
   }
 
-data HandsType = HandsHydra | HandsVive deriving (Eq, Show, Ord)
-
--- | Get the hands from OpenVR or Sixense
-getHands :: MonadIO m => VRPal -> m ([Hand], HandsType)
-getHands VRPal{..} = case gpHMD of
-  OpenVRHMD OpenVR{..} -> do
-    poses <- getDevicePosesOfClass ovrSystem TrackedDeviceClassController
-
-    hands <- forM (zip [0..] poses) $ \(i, pose) -> do
-      buttonStates <- getControllerState ovrSystem i
-      return (handFromOpenVRController i pose buttonStates)
-
-    -- Check for Hydras in case we're using SteamVR + Oculus
-    if null hands
-      then (, HandsHydra) <$> handsFromHydra gpSixenseBase
-      else (, HandsVive)  <$> return hands
-
-  _ -> (, HandsHydra) <$> handsFromHydra gpSixenseBase
-
 triggerHandHapticPulse :: MonadIO m => VRPal -> CInt -> CInt -> CUShort -> m ()
 triggerHandHapticPulse VRPal{..} controllerNumber axis duration = case gpHMD of
   OpenVRHMD openVR -> 
@@ -84,41 +65,6 @@ handFromOpenVRController i matrix (x, y, trigger, grip, start) = emptyHand
   , _hndButtonS = start
   }
 
-#ifdef USE_HYDRA_SDK
-handsFromHydra :: MonadIO m => Maybe Hydra.SixenseBase -> m [Hand]
-handsFromHydra mSixenseBase = 
-  map handFromHydra <$> 
-    maybe (return []) 
-          Hydra.getHands
-          mSixenseBase
-
-handFromHydra :: Hydra.ControllerData -> Hand
-handFromHydra handData = emptyHand
-  { _hndID = if Hydra.whichHand handData == Hydra.LeftHand then 0 else 1
-  , _hndMatrix = mkTransformation
-      (Hydra.rotQuat handData)
-      ((position * hydraScale) + hydraOffset)
-  , _hndXY      = V2 (deadzoneOf 0.1 $ Hydra.joystickX handData)
-                     (deadzoneOf 0.1 $ Hydra.joystickY handData)
-  , _hndTrigger = Hydra.trigger handData
-  , _hndGrip    = Hydra.ButtonBumper   `elem` buttons
-  , _hndButtonS = Hydra.ButtonStart    `elem` buttons
-  , _hndButtonJ = Hydra.ButtonJoystick `elem` buttons
-  , _hndButtonA = Hydra.Button1        `elem` buttons
-  , _hndButtonB = Hydra.Button2        `elem` buttons
-  , _hndButtonC = Hydra.Button3        `elem` buttons
-  , _hndButtonD = Hydra.Button4        `elem` buttons
-  }
-  where
-    position = realToFrac <$> Hydra.pos handData
-    buttons = Hydra.handButtons handData
-    hydraScale = 1/500
-    hydraOffset = V3 0 (-1) (-1)
-#else
-handsFromHydra :: MonadIO m => Maybe SixenseBase -> m [Hand]
-handsFromHydra = return . const []
-#endif
-
 handsToWorldPoses :: M44 GLfloat -> [Hand] -> [M44 GLfloat]
 handsToWorldPoses player hands  = map ((player !*!) . (view hndMatrix)) hands
 
@@ -127,10 +73,10 @@ deadzoneOf zone value = if abs value > zone then value else 0
 
 showHandKeyboard :: MonadIO m => VRPal -> m ()
 showHandKeyboard VRPal{..} = case gpHMD of
-  OpenVRHMD ovr -> showKeyboard
+  OpenVRHMD _ -> showKeyboard
   _ -> return ()
 
 hideHandKeyboard :: MonadIO m => VRPal -> m ()
 hideHandKeyboard VRPal{..} = case gpHMD of
-  OpenVRHMD ovr -> hideKeyboard
+  OpenVRHMD _ -> hideKeyboard
   _ -> return ()
