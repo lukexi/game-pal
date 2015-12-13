@@ -149,7 +149,7 @@ renderOpenVR :: (MonadIO m)
              -> Bool
              -> m ()
 renderOpenVR OpenVR{..} playerPose headM44 frameRenderFunc eyeRenderFunc useSDKMirror = do
-  let viewM44 = inv44 (headM44 !*! transformationFromPose playerPose)
+  let viewM44 = inv44 headM44 !*! transformationFromPose playerPose
   
   forM_ ovrEyes $ \eye@EyeInfo{..} -> do
 
