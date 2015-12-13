@@ -5,7 +5,6 @@ module Graphics.VR.Pal.Types where
 import Graphics.UI.GLFW.Pal
 
 import Data.Time
-import Graphics.GL.Pal
 import Graphics.VR.OpenVR
 
 #ifdef USE_OCULUS_SDK

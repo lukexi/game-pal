@@ -9,7 +9,6 @@ import Graphics.GL.Pal
 
 import Graphics.VR.OpenVR
 import Graphics.VR.Pal.Types
-import Control.Monad
 import Control.Monad.Trans
 import Foreign.C
 
