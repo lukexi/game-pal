@@ -16,6 +16,27 @@ import Foreign.C
 import qualified System.Hardware.Hydra as Hydra
 #endif
 
+data ButtonState = ButtonDown | ButtonUp deriving Show
+
+data HandButton = HandButtonA
+                | HandButtonB
+                | HandButtonC
+                | HandButtonD
+                | HandButtonStart
+                | HandButtonGrip
+                | HandButtonTrigger
+                deriving Show
+
+data WhichHand = LeftHand | RightHand deriving Show
+
+data HandEvent = HandStateEvent  Hand
+               | HandButtonEvent HandButton ButtonState
+               deriving Show
+
+data VREvent = HeadEvent (M44 GLfloat)
+             | HandEvent WhichHand HandEvent
+             deriving Show
+
 type HandID = Int
 data Hand = Hand
   { _hndID       :: HandID
