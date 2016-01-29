@@ -68,16 +68,15 @@ emptyHand = Hand
   , _hndButtonD  = False
   }
 
-triggerHandHapticPulse :: MonadIO m => VRPal -> CInt -> CInt -> CUShort -> m ()
+triggerHandHapticPulse :: MonadIO m => VRPal -> TrackedControllerRole -> CInt -> CUShort -> m ()
 triggerHandHapticPulse VRPal{..} controllerNumber axis duration = case gpHMD of
   OpenVRHMD openVR -> 
     triggerHapticPulse (ovrSystem openVR) controllerNumber axis duration
   _ -> return ()
 
-handFromOpenVRController :: (Integral a, Real b) 
-                         => a -> M44 GLfloat -> (b, b, b, Bool, Bool) -> Hand
+handFromOpenVRController :: (Real a) => TrackedControllerRole -> M44 GLfloat -> (a, a, a, Bool, Bool) -> Hand
 handFromOpenVRController i matrix (x, y, trigger, grip, start) = emptyHand 
-  { _hndID      = fromIntegral i
+  { _hndID      = if i == TrackedControllerRoleLeftHand then 0 else 1
   , _hndMatrix  = matrix 
   , _hndXY      = realToFrac <$> V2 x y
   , _hndTrigger = realToFrac trigger 
