@@ -79,14 +79,17 @@ initVRPal windowName devices = do
 
   getDelta <- makeGetDelta
 
+  emulatedHandDepthRef <- newIORef 3
+
   return VRPal
-    { gpWindow       = window
-    , gpEvents       = events
-    , gpHMD          = hmdType
-    , gpGetDelta     = getDelta
-    , gpGCPerFrame   = doGCPerFrame
-    , gpRoomScale    = isRoomScale
-    , gpUseSDKMirror = case hmdType of { NoHMD -> False; _ -> useSDKMirror }
+    { gpWindow               = window
+    , gpEvents               = events
+    , gpHMD                  = hmdType
+    , gpGetDelta             = getDelta
+    , gpGCPerFrame           = doGCPerFrame
+    , gpRoomScale            = isRoomScale
+    , gpUseSDKMirror         = case hmdType of { NoHMD -> False; _ -> useSDKMirror }
+    , gpEmulatedHandDepthRef = emulatedHandDepthRef
     }
 
 whileVR :: MonadIO m => VRPal -> (M44 GLfloat -> [Hand] -> m a) -> m ()
