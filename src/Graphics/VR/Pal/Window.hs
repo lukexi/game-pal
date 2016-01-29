@@ -93,17 +93,11 @@ whileVR :: MonadIO m => VRPal -> (M44 GLfloat -> [Hand] -> m a) -> m ()
 whileVR VRPal{..} action = whileWindow gpWindow $ do
   case gpHMD of
     OpenVRHMD OpenVR{..} -> do
-      ovrPoses <- waitGetPoses ovrCompositor ovrSystem
+      (headM44, hands) <- waitGetPoses ovrCompositor ovrSystem
 
-      let (headM44, handM44s) = case ovrPoses of
-            [headM44']                            -> (headM44', [])
-            [headM44', oneHandM44]                -> (headM44', [oneHandM44])
-            [headM44', leftHandM44, rightHandM44] -> (headM44', [leftHandM44, rightHandM44])
-            _                                    -> (identity, [])
-
-      hands <- forM (zip [0..] handM44s) $ \(i, handM44) -> do
-        buttonStates <- getControllerState ovrSystem i
-        return (handFromOpenVRController i handM44 buttonStates)
+      hands <- forM hands $ \(controllerRole, handM44) -> do
+        buttonStates <- getControllerState ovrSystem controllerRole
+        return (handFromOpenVRController controllerRole handM44 buttonStates)
       
       action headM44 hands
 #ifdef USE_OCULUS_SDK
