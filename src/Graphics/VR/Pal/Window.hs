@@ -50,13 +50,17 @@ initVRPal windowName devices = do
         mOpenVR <- if hmdPresent then createOpenVR else return Nothing
         case mOpenVR of
           Just openVR -> do
+            hideKeyboard
             -- 
             if useSDKMirror
               then do
                 showMirrorWindow (ovrCompositor openVR)
                 -- Clear and hide the application window, as we don't display to it
                 glClear GL_COLOR_BUFFER_BIT
-                iconifyWindow window
+                -- iconifyWindow window
+                -- Need focus to receive keyboard input, so focusing it here
+                restoreWindow window
+                showWindow window
               else forM_ (ovrEyes openVR) $ \eye -> case eiEye eye of
                 LeftEye -> do
                   let (_, _, w, h) = eiViewport eye
