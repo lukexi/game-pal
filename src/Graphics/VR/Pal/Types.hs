@@ -5,6 +5,7 @@ module Graphics.VR.Pal.Types where
 import Graphics.UI.GLFW.Pal
 
 import Data.Time
+import Data.IORef
 import Graphics.VR.OpenVR
 
 #ifdef USE_OCULUS_SDK
@@ -27,13 +28,14 @@ data HMDType = NoHMD
 #endif
 
 data VRPal = VRPal
-  { gpWindow       :: !Window
-  , gpEvents       :: !Events
-  , gpHMD          :: !HMDType
-  , gpGetDelta     :: !(IO NominalDiffTime)
-  , gpGCPerFrame   :: !Bool
-  , gpUseSDKMirror :: !Bool
-  , gpRoomScale    :: !RoomScale
+  { gpWindow               :: !Window
+  , gpEvents               :: !Events
+  , gpHMD                  :: !HMDType
+  , gpGetDelta             :: !(IO NominalDiffTime)
+  , gpGCPerFrame           :: !Bool
+  , gpUseSDKMirror         :: !Bool
+  , gpRoomScale            :: !RoomScale
+  , gpEmulatedHandDepthRef :: !(IORef Float)
   }
 
 
