@@ -96,23 +96,24 @@ initVRPal windowName devices = do
     , gpEmulatedHandDepthRef = emulatedHandDepthRef
     }
 
-whileVR :: MonadIO m => VRPal -> (M44 GLfloat -> [Hand] -> m a) -> m ()
+whileVR :: MonadIO m => VRPal -> (M44 GLfloat -> [Hand] -> [VREvent] -> m a) -> m ()
 whileVR VRPal{..} action = whileWindow gpWindow $ do
   case gpHMD of
     OpenVRHMD OpenVR{..} -> do
+      events <- pollNextEvent ovrSystem
       (headM44, hands) <- waitGetPoses ovrCompositor ovrSystem
 
       hands <- forM hands $ \(controllerRole, handM44) -> do
         buttonStates <- getControllerState ovrSystem controllerRole
         return (handFromOpenVRController controllerRole handM44 buttonStates)
       
-      action headM44 hands
+      action headM44 hands (map vrEventFromOpenVREvent events)
 #ifdef USE_OCULUS_SDK
     OculusHMD hmd -> 
       headM44 <- liftIO (getHMDPose (hmdInfo hmd))
-      action headM44 []
+      action headM44 [] []
 #endif
-    _ -> action identity []
+    _ -> action identity [] []
 
 renderWith :: MonadIO m
            => VRPal

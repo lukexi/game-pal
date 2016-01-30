@@ -35,6 +35,7 @@ data HandEvent = HandStateEvent  Hand
 
 data VREvent = HeadEvent (M44 GLfloat)
              | HandEvent WhichHand HandEvent
+             | VRKeyboardInputEvent String
              deriving Show
 
 type HandID = Int
@@ -83,6 +84,8 @@ handFromOpenVRController i matrix (x, y, trigger, grip, start) = emptyHand
   , _hndGrip    = grip
   , _hndButtonS = start
   }
+
+vrEventFromOpenVREvent (OpenVREventKeyboardCharInput string) = VRKeyboardInputEvent string
 
 handsToWorldPoses :: M44 GLfloat -> [Hand] -> [M44 GLfloat]
 handsToWorldPoses player hands  = map ((player !*!) . (view hndMatrix)) hands
