@@ -20,8 +20,7 @@ data ButtonState = ButtonDown | ButtonUp deriving Show
 
 data HandButton = HandButtonA
                 | HandButtonB
-                | HandButtonC
-                | HandButtonD
+                | HandButtonJoy
                 | HandButtonStart
                 | HandButtonGrip
                 | HandButtonTrigger
@@ -49,8 +48,6 @@ data Hand = Hand
   , _hndButtonJ  :: Bool -- Joystick button on Hydra
   , _hndButtonA  :: Bool
   , _hndButtonB  :: Bool
-  , _hndButtonC  :: Bool
-  , _hndButtonD  :: Bool
   } deriving (Show)
 makeLenses ''Hand
 
@@ -65,8 +62,6 @@ emptyHand = Hand
   , _hndButtonJ  = False
   , _hndButtonA  = False
   , _hndButtonB  = False
-  , _hndButtonC  = False
-  , _hndButtonD  = False
   }
 
 triggerHandHapticPulse :: MonadIO m => VRPal -> TrackedControllerRole -> CInt -> CUShort -> m ()
