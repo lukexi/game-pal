@@ -80,6 +80,7 @@ handFromOpenVRController i matrix (x, y, trigger, grip, start) = emptyHand
   , _hndButtonS = start
   }
 
+vrEventFromOpenVREvent :: OpenVREvent -> VREvent
 vrEventFromOpenVREvent (OpenVREventKeyboardCharInput string) = VRKeyboardInputEvent string
 
 handsToWorldPoses :: M44 GLfloat -> [Hand] -> [M44 GLfloat]
