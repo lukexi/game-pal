@@ -34,7 +34,7 @@ library
     gl,
     glfw-pal,
     gl-pal,
-    halive,
+    -- halive,
     random,
     containers,
     MonadRandom,
@@ -61,7 +61,7 @@ test-suite minimal
                      , gl
                      , linear-extra
                      , mtl
-                     , halive
+                     -- , halive
                      , time
 
 test-suite cubes
@@ -78,7 +78,7 @@ test-suite cubes
                      , linear-extra
                      , mtl
                      , lens-extra
-                     , halive
+                     -- , halive
                      , random
                      , containers
                      , MonadRandom

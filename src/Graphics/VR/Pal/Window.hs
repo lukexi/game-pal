@@ -15,7 +15,7 @@ import Graphics.GL.Pal
 -- import System.Mem
 import Data.Time
 import Data.IORef
-import Halive.Utils
+--import Halive.Utils
 
 #ifdef USE_OCULUS_SDK
 import Graphics.Oculus
@@ -36,7 +36,8 @@ initVRPal windowName devices = do
 
   -- Turn off garbage collection per frame when Halive is active, 
   -- as it grinds things to a halt (I don't know why)
-  doGCPerFrame <- not <$> isHaliveActive
+  --doGCPerFrame <- not <$> isHaliveActive
+  let doGCPerFrame = False
 
   let (resX, resY) = (500, 400)
   
