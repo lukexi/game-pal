@@ -82,7 +82,10 @@ initVRPal windowName devices = do
 #endif
     | otherwise -> return (NoHMD, NotRoomScale)
 
-  getDelta <- makeGetDelta
+
+  start    <- getCurrentTime
+  timeRef  <- newIORef start
+  deltaRef <- newIORef 0
 
   emulatedHandDepthRef <- newIORef 3
 
@@ -90,15 +93,19 @@ initVRPal windowName devices = do
     { gpWindow               = window
     , gpEvents               = events
     , gpHMD                  = hmdType
-    , gpGetDelta             = getDelta
+    , gpTimeRef              = timeRef
+    , gpDeltaRef             = deltaRef
     , gpGCPerFrame           = doGCPerFrame
     , gpRoomScale            = isRoomScale
     , gpUseSDKMirror         = case hmdType of { NoHMD -> False; _ -> useSDKMirror }
     , gpEmulatedHandDepthRef = emulatedHandDepthRef
     }
 
+getDeltaTime VRPal{..} = liftIO (readIORef gpDeltaRef)
+
 whileVR :: MonadIO m => VRPal -> (M44 GLfloat -> [Hand] -> [VREvent] -> m a) -> m ()
-whileVR VRPal{..} action = whileWindow gpWindow $ do
+whileVR vrPal@VRPal{..} action = whileWindow gpWindow $ do
+  tickDelta vrPal
   case gpHMD of
     OpenVRHMD OpenVR{..} -> do
       events <- pollNextEvent ovrSystem
@@ -209,21 +216,11 @@ recenterSeatedPose gamePal = case gpHMD gamePal of
 
 
 
-makeGetDelta :: IO (IO NominalDiffTime)
-makeGetDelta  = do 
+tickDelta VRPal{..} = liftIO $ do
+  lastTime <- readIORef gpTimeRef
+  currTime <- getCurrentTime
 
-  start <- getCurrentTime
-  timeRef <- newIORef start
+  let diffTime = diffUTCTime currTime lastTime
 
-  let getDelta = do
-
-        lastTime <- readIORef timeRef
-        currTime <- getCurrentTime
-
-        let diffTime = diffUTCTime currTime lastTime
-
-        writeIORef timeRef currTime
-
-        return diffTime 
-
-  return getDelta
+  writeIORef gpTimeRef currTime
+  writeIORef gpDeltaRef diffTime

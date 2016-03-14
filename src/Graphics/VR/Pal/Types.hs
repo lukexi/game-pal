@@ -31,7 +31,8 @@ data VRPal = VRPal
   { gpWindow               :: !Window
   , gpEvents               :: !Events
   , gpHMD                  :: !HMDType
-  , gpGetDelta             :: !(IO NominalDiffTime)
+  , gpTimeRef              :: !(IORef UTCTime)
+  , gpDeltaRef             :: !(IORef NominalDiffTime)
   , gpGCPerFrame           :: !Bool
   , gpUseSDKMirror         :: !Bool
   , gpRoomScale            :: !RoomScale
