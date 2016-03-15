@@ -102,6 +102,7 @@ initVRPal windowName devices = do
     }
 
 getDeltaTime VRPal{..} = liftIO (readIORef gpDeltaRef)
+getNow VRPal{..} = liftIO (readIORef gpTimeRef)
 
 whileVR :: MonadIO m => VRPal -> (M44 GLfloat -> [Hand] -> [VREvent] -> m a) -> m ()
 whileVR vrPal@VRPal{..} action = whileWindow gpWindow $ do
