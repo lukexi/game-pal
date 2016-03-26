@@ -87,7 +87,7 @@ initVRPal windowName devices = do
   timeRef  <- newIORef start
   deltaRef <- newIORef 0
 
-  emulatedHandDepthRef <- newIORef 3
+  emulatedHandDepthRef <- newIORef 1
 
   return VRPal
     { gpWindow               = window
@@ -101,7 +101,10 @@ initVRPal windowName devices = do
     , gpEmulatedHandDepthRef = emulatedHandDepthRef
     }
 
+getDeltaTime :: MonadIO m => VRPal -> m NominalDiffTime
 getDeltaTime VRPal{..} = liftIO (readIORef gpDeltaRef)
+
+getNow :: MonadIO m => VRPal -> m UTCTime
 getNow VRPal{..} = liftIO (readIORef gpTimeRef)
 
 whileVR :: MonadIO m => VRPal -> (M44 GLfloat -> [Hand] -> [VREvent] -> m a) -> m ()
@@ -110,9 +113,9 @@ whileVR vrPal@VRPal{..} action = whileWindow gpWindow $ do
   case gpHMD of
     OpenVRHMD OpenVR{..} -> do
       events <- pollNextEvent ovrSystem
-      (headM44, hands) <- waitGetPoses ovrCompositor ovrSystem
+      (headM44, handM44sByRole) <- waitGetPoses ovrCompositor ovrSystem
 
-      hands <- forM hands $ \(controllerRole, handM44) -> do
+      hands <- forM handM44sByRole $ \(controllerRole, handM44) -> do
         buttonStates <- getControllerState ovrSystem controllerRole
         return (handFromOpenVRController controllerRole handM44 buttonStates)
       
@@ -216,7 +219,7 @@ recenterSeatedPose gamePal = case gpHMD gamePal of
   _ -> return ()
 
 
-
+tickDelta :: MonadIO m => VRPal -> m ()
 tickDelta VRPal{..} = liftIO $ do
   lastTime <- readIORef gpTimeRef
   currTime <- getCurrentTime
