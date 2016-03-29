@@ -28,16 +28,16 @@ data HMDType = NoHMD
 #endif
 
 data VRPal = VRPal
-  { gpWindow               :: !Window
-  , gpEvents               :: !Events
-  , gpHMD                  :: !HMDType
-  , gpTimeRef              :: !(IORef UTCTime)
-  , gpDeltaRef             :: !(IORef NominalDiffTime)
-  , gpGCPerFrame           :: !Bool
-  , gpUseSDKMirror         :: !Bool
-  , gpRoomScale            :: !RoomScale
-  , gpEmulatedHandDepthRef :: !(IORef Float)
-  }
+    { gpWindow               :: !Window
+    , gpEvents               :: !Events
+    , gpHMD                  :: !HMDType
+    , gpTimeRef              :: !(IORef UTCTime)
+    , gpDeltaRef             :: !(IORef NominalDiffTime)
+    , gpGCPerFrame           :: !Bool
+    , gpUseSDKMirror         :: !Bool
+    , gpRoomScale            :: !RoomScale
+    , gpEmulatedHandDepthRef :: !(IORef Float)
+    }
 
 
 
