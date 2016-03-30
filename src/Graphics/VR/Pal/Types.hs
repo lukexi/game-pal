@@ -7,7 +7,7 @@ import Graphics.UI.GLFW.Pal
 import Data.Time
 import Data.IORef
 import Graphics.VR.OpenVR
-
+import Control.Concurrent
 #ifdef USE_OCULUS_SDK
 import Graphics.Oculus
 #endif
@@ -37,6 +37,7 @@ data VRPal = VRPal
     , gpUseSDKMirror         :: !Bool
     , gpRoomScale            :: !RoomScale
     , gpEmulatedHandDepthRef :: !(IORef Float)
+    , gpBackgroundSwap       :: !(MVar (IO ()))
     }
 
 
