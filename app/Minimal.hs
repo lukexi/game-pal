@@ -5,20 +5,19 @@ module Main where
 
 import Graphics.VR.Pal
 import Graphics.UI.GLFW.Pal
-import Graphics.GL.Pal
+import Graphics.GL.Pal hiding (getNow)
 import Data.Time
 
-getNow = realToFrac . utctDayTime <$> getCurrentTime
 
 main :: IO ()
 main = do
 
   vrPal@VRPal{..} <- initVRPal "VR Pal" [UseOpenVR]
   
-  whileVR vrPal $ \headM44 hands -> do
+  whileVR vrPal $ \headM44 hands events -> do
 
     let pulse = do
-          now <- (/ 2) . (+ 1) . sin <$> getNow
+          now <- (/ 2) . (+ 1) . sin . realToFrac . utctDayTime <$> getNow vrPal
           glClearColor 0.2 0.1 (now * 0.3) 1
 
     renderWith vrPal newPose headM44  
