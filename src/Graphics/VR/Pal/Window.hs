@@ -152,19 +152,20 @@ renderWith VRPal{..} playerPose headM44 frameRenderFunc eyeRenderFunc = do
             glViewport x y w h
             frameRenderFunc
             renderFlat gpWindow playerPose eyeRenderFunc
-        OpenVRHMD openVR -> 
+            swapBuffers gpWindow
+        OpenVRHMD openVR -> do
             renderOpenVR openVR playerPose headM44 frameRenderFunc eyeRenderFunc gpUseSDKMirror
+            when (not gpUseSDKMirror) $ do
+                -- This is a workaround to horrible regular stalls when calling swapBuffers on the main thread.
+                -- We use a one-slot MVar rather than a channel to avoid any memory leaks if the background
+                -- thread can't keep up - it's not important to update the mirror window on any particular
+                -- schedule as long as it happens semi-regularly. 
+                void . liftIO $ tryPutMVar gpBackgroundSwap (swapBuffers gpWindow)
 #ifdef USE_OCULUS_SDK
         OculusHMD hmd -> 
             renderOculus hmd playerPose frameRenderFunc eyeRenderFunc
 #endif
-    -- We always call swapBuffers since mirroring is handled manually in 0.6+ and OpenVR
-    when (not gpUseSDKMirror) $ do
-        -- This is a workaround to horrible regular stalls when calling swapBuffers on the main thread.
-        -- We use a one-slot MVar rather than a channel to avoid any memory leaks if the background
-        -- thread can't keep up - it's not important to update the mirror window on any particular
-        -- schedule as long as it happens semi-regularly. 
-        void . liftIO $ tryPutMVar gpBackgroundSwap (swapBuffers gpWindow)
+    
     
     -- when gpGCPerFrame $ 
     --   profile "GC" 0 $ liftIO performGC
