@@ -3,7 +3,6 @@ packages:
 - '.'
 - '../gl-pal'
 - '../glfw-pal'
-# - '../hydra-hs'
 # - '../oculus-mini'
 # - '../halive'
 - '../linear-extra'
