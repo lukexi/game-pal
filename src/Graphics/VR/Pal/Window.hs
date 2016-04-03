@@ -111,48 +111,50 @@ getDeltaTime VRPal{..} = liftIO (readIORef gpDeltaRef)
 getNow :: MonadIO m => VRPal -> m UTCTime
 getNow VRPal{..} = liftIO (readIORef gpTimeRef)
 
-whileVR :: MonadIO m => VRPal -> (M44 GLfloat -> [VREvent] -> m a) -> m ()
-whileVR vrPal@VRPal{..} action = whileWindow gpWindow $ do
+tickVR :: MonadIO m => VRPal -> M44 GLfloat -> m (M44 GLfloat, [VREvent])
+tickVR vrPal@VRPal{..} playerM44 = do
     tickDelta vrPal
 
     case gpHMD of
         OpenVRHMD OpenVR{..} -> do
             events                    <- pollNextEvent ovrSystem
-            (headM44, handM44sByRole) <- waitGetPoses ovrCompositor ovrSystem
+            (headM44Raw, handM44sByRole) <- waitGetPoses ovrCompositor ovrSystem
+            let headM44 = playerM44 !*! headM44Raw 
       
-            hands <- catMaybes <$> forM handM44sByRole (\(controllerRole, handM44) -> do
+            hands <- catMaybes <$> forM handM44sByRole (\(controllerRole, handM44Raw) -> do
                 forM (trackedControllerRoleToWhichHand controllerRole) $ \whichHand -> do
                     buttonStates <- getControllerState ovrSystem controllerRole
+                    let handM44 = playerM44 !*! handM44Raw 
                     return $ HandEvent whichHand (HandStateEvent (handFromOpenVRController handM44 buttonStates))
                 )
-            
+
             let vrEvents = HeadEvent headM44 : hands ++ (catMaybes $ map vrEventFromOpenVREvent events) 
-                        
-            action headM44 vrEvents
+
+            return (headM44, vrEvents)
 #ifdef USE_OCULUS_SDK
         OculusHMD hmd -> 
             headM44 <- liftIO (getHMDPose (hmdInfo hmd))
-            action headM44 []
+            return (headM44, [])
 #endif
-        _ -> action identity []
+        _ -> return (playerM44, [])
 
 renderWith :: MonadIO m
            => VRPal
-           -> Pose GLfloat
            -> M44 GLfloat
            -> m ()
            -> (M44 GLfloat -> M44 GLfloat -> m b)
            -> m ()
-renderWith VRPal{..} playerPose headM44 frameRenderFunc eyeRenderFunc = do
+renderWith VRPal{..} headM44 frameRenderFunc eyeRenderFunc = do
+    let viewM44 = inv44 headM44
     case gpHMD of
         NoHMD  -> do
             (x,y,w,h) <- getWindowViewport gpWindow
             glViewport x y w h
             frameRenderFunc
-            renderFlat gpWindow playerPose eyeRenderFunc
+            renderFlat gpWindow viewM44 eyeRenderFunc
             swapBuffers gpWindow
         OpenVRHMD openVR -> do
-            renderOpenVR openVR playerPose headM44 frameRenderFunc eyeRenderFunc gpUseSDKMirror
+            renderOpenVR openVR viewM44 frameRenderFunc eyeRenderFunc gpUseSDKMirror
             when (not gpUseSDKMirror) $ do
                 -- This is a workaround to horrible regular stalls when calling swapBuffers on the main thread.
                 -- We use a one-slot MVar rather than a channel to avoid any memory leaks if the background
@@ -170,14 +172,12 @@ renderWith VRPal{..} playerPose headM44 frameRenderFunc eyeRenderFunc = do
 
 renderOpenVR :: (MonadIO m) 
              => OpenVR
-             -> Pose GLfloat
              -> M44 GLfloat
              -> m a
              -> (M44 GLfloat -> M44 GLfloat -> m a1)
              -> Bool
              -> m ()
-renderOpenVR OpenVR{..} playerPose headM44 frameRenderFunc eyeRenderFunc useSDKMirror = do
-    let viewM44 = inv44 headM44 !*! transformationFromPose playerPose
+renderOpenVR OpenVR{..} viewM44 frameRenderFunc eyeRenderFunc useSDKMirror = do
 
     -- Render each eye, with multisampling
     forM_ ovrEyes $ \EyeInfo{..} -> do
@@ -226,12 +226,12 @@ renderOculus hmd playerPose frameRenderFunc eyeRenderFunc = do
 #endif
 
 renderFlat :: MonadIO m 
-           => Window -> Pose GLfloat -> (M44 GLfloat -> M44 GLfloat -> m b) -> m ()
-renderFlat win playerPose renderFunc = do
+           => Window -> M44 GLfloat -> (M44 GLfloat -> M44 GLfloat -> m b) -> m ()
+renderFlat win viewM44 renderFunc = do
     
     projection  <- getWindowProjection win 45 0.1 1000
     
-    _           <- renderFunc projection (viewMatrixFromPose playerPose)
+    _           <- renderFunc projection viewM44
   
     return ()
 
