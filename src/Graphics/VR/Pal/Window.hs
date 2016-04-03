@@ -23,11 +23,6 @@ import Control.Concurrent
 import Graphics.Oculus
 #endif
 
-#ifdef USE_HYDRA_SDK
-import qualified System.Hardware.Hydra as Hydra
-#endif
-
-
 
 initVRPal :: String -> [VRPalDevices] -> IO VRPal
 initVRPal windowName devices = do
@@ -56,9 +51,7 @@ initVRPal windowName devices = do
                 Just openVR -> do
                     -- Disable the cursor
                     --setCursorInputMode window CursorInputMode'Disabled
-        
-                    hideKeyboard
-                    -- 
+                            
                     if useSDKMirror
                         then do
                             showMirrorWindow (ovrCompositor openVR)
@@ -118,25 +111,30 @@ getDeltaTime VRPal{..} = liftIO (readIORef gpDeltaRef)
 getNow :: MonadIO m => VRPal -> m UTCTime
 getNow VRPal{..} = liftIO (readIORef gpTimeRef)
 
-whileVR :: MonadIO m => VRPal -> (M44 GLfloat -> [Hand] -> [VREvent] -> m a) -> m ()
+whileVR :: MonadIO m => VRPal -> (M44 GLfloat -> [VREvent] -> m a) -> m ()
 whileVR vrPal@VRPal{..} action = whileWindow gpWindow $ do
     tickDelta vrPal
+
     case gpHMD of
         OpenVRHMD OpenVR{..} -> do
-            events <- pollNextEvent ovrSystem
+            events                    <- pollNextEvent ovrSystem
             (headM44, handM44sByRole) <- waitGetPoses ovrCompositor ovrSystem
       
-            hands <- forM handM44sByRole $ \(controllerRole, handM44) -> do
-                buttonStates <- getControllerState ovrSystem controllerRole
-                return (handFromOpenVRController controllerRole handM44 buttonStates)
+            hands <- catMaybes <$> forM handM44sByRole (\(controllerRole, handM44) -> do
+                forM (trackedControllerRoleToWhichHand controllerRole) $ \whichHand -> do
+                    buttonStates <- getControllerState ovrSystem controllerRole
+                    return $ HandEvent whichHand (HandStateEvent (handFromOpenVRController handM44 buttonStates))
+                )
             
-            action headM44 hands (map vrEventFromOpenVREvent events)
+            let vrEvents = HeadEvent headM44 : hands ++ (catMaybes $ map vrEventFromOpenVREvent events) 
+                        
+            action headM44 vrEvents
 #ifdef USE_OCULUS_SDK
         OculusHMD hmd -> 
             headM44 <- liftIO (getHMDPose (hmdInfo hmd))
-            action headM44 [] []
+            action headM44 []
 #endif
-        _ -> action identity [] []
+        _ -> action identity []
 
 renderWith :: MonadIO m
            => VRPal
@@ -182,7 +180,7 @@ renderOpenVR OpenVR{..} playerPose headM44 frameRenderFunc eyeRenderFunc useSDKM
     let viewM44 = inv44 headM44 !*! transformationFromPose playerPose
 
     -- Render each eye, with multisampling
-    forM_ ovrEyes $ \eye@EyeInfo{..} -> do
+    forM_ ovrEyes $ \EyeInfo{..} -> do
 
         -- Will render into mfbResolveTextureID
         withMultisamplingFramebuffer eiMultisampleFramebuffer $ do
@@ -197,7 +195,7 @@ renderOpenVR OpenVR{..} playerPose headM44 frameRenderFunc eyeRenderFunc useSDKM
             return ()
 
     -- Submit frames after rendering both
-    forM_ ovrEyes $ \eye@EyeInfo{..} -> do
+    forM_ ovrEyes $ \EyeInfo{..} -> do
         let MultisampleFramebuffer{..} = eiMultisampleFramebuffer
         submitFrameForEye ovrCompositor eiEye (unTextureID mfbResolveTextureID)
 

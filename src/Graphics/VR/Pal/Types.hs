@@ -1,5 +1,5 @@
-{-# LANGUAGE TemplateHaskell, DeriveGeneric, DeriveAnyClass #-}
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Graphics.VR.Pal.Types where
 
 import Graphics.UI.GLFW.Pal
@@ -8,6 +8,9 @@ import Data.Time
 import Data.IORef
 import Graphics.VR.OpenVR
 import Control.Concurrent
+import Control.Lens.Extra
+import Linear.Extra
+import Graphics.GL
 #ifdef USE_OCULUS_SDK
 import Graphics.Oculus
 #endif
@@ -41,4 +44,41 @@ data VRPal = VRPal
     }
 
 
+data VRPalEvent = GLFWEvent Event
+                | VREvent VREvent
+                deriving Show
 
+data ButtonState = ButtonDown | ButtonUp | ButtonTouch | ButtonUntouch deriving Show
+
+data HandButton = HandButtonA
+                | HandButtonB
+                | HandButtonPad
+                | HandButtonStart
+                | HandButtonGrip
+                | HandButtonTrigger
+                deriving Show
+
+data WhichHand = LeftHand | RightHand deriving (Show, Eq)
+
+data HandEvent = HandStateEvent  Hand
+               | HandButtonEvent HandButton ButtonState
+               deriving Show
+
+data VREvent = HeadEvent (M44 GLfloat)
+             | HandEvent WhichHand HandEvent
+             | HandKeyboardInputEvent String
+             deriving Show
+
+type HandID = Int
+data Hand = Hand
+    { _hndID       :: HandID
+    , _hndMatrix   :: M44 GLfloat
+    , _hndXY       :: V2 GLfloat  -- Touchpad on Vive
+    , _hndTrigger  :: GLfloat
+    , _hndGrip     :: Bool -- Grip on Vive
+    , _hndButtonS  :: Bool -- Top button on Vive
+    , _hndButtonJ  :: Bool -- Pad button on Vive
+    , _hndButtonA  :: Bool
+    , _hndButtonB  :: Bool
+    } deriving (Show)
+makeLenses ''Hand

@@ -8,7 +8,7 @@ import Graphics.GL
 import Graphics.UI.GLFW.Pal
 import Control.Monad.State
 import Control.Lens.Extra
-import Graphics.VR.Pal.Hands
+import Graphics.VR.Pal.Types
 
 moveSpeed :: GLfloat
 moveSpeed = 0.01
