@@ -31,7 +31,7 @@ getNow :: IO Double
 getNow = realToFrac . utctDayTime <$> getCurrentTime
 
 worldCubes :: [Cube]
-worldCubes = [cubeAt x y z | x <- [-20..20], y <- [-2..2], z <- [-20..20] ]
+worldCubes = [cubeAt x y z | x <- [-5..5], y <- [-2..2], z <- [-5..5] ]
   where
     cubeAt x y z = Cube 
         { _cubMatrix = transformationFromPose $ newPose { _posPosition = V3 x y z }
@@ -53,12 +53,11 @@ main = do
     glEnable GL_DEPTH_TEST
     useProgram (sProgram cubeShape)
     
-    whileVR vrPal $ \headM44 hands _ -> do
-            
+    whileWindow gpWindow $ do
+        (headM44, _vrEvents) <- tickVR vrPal identity
         processEvents gpEvents $ \e -> closeOnEscape gpWindow e
     
-        renderWith vrPal newPose headM44  
-            (glClear (GL_COLOR_BUFFER_BIT .|. GL_DEPTH_BUFFER_BIT))
+        renderWith vrPal headM44  
             (render cubeShape worldCubes)
 
 render :: (MonadIO m) 
@@ -68,6 +67,8 @@ render :: (MonadIO m)
        -> M44 GLfloat 
        -> m ()
 render cubeShape cubes projM44 viewM44  = do
+    glClear (GL_COLOR_BUFFER_BIT .|. GL_DEPTH_BUFFER_BIT)
+
     let Uniforms{..} = sUniforms cubeShape
         projView = projM44 !*! viewM44
   

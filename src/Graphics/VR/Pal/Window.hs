@@ -41,7 +41,7 @@ initVRPal windowName devices = do
     (window, events) <- createWindow windowName resX resY
   
   
-    -- swapInterval 0
+    swapInterval 0
   
     (hmdType, isRoomScale) <- if 
         | UseOpenVR `elem` devices -> do
@@ -87,8 +87,9 @@ initVRPal windowName devices = do
   
     emulatedHandDepthRef <- newIORef 1
     
+    -- See note in renderWith
     backgroundSwap <- newEmptyMVar
-    forkIO . forever $ do
+    _ <- forkIO . forever $ do
         action <- takeMVar backgroundSwap
         action  
 
@@ -141,20 +142,18 @@ tickVR vrPal@VRPal{..} playerM44 = do
 renderWith :: MonadIO m
            => VRPal
            -> M44 GLfloat
-           -> m ()
            -> (M44 GLfloat -> M44 GLfloat -> m b)
            -> m ()
-renderWith VRPal{..} headM44 frameRenderFunc eyeRenderFunc = do
+renderWith VRPal{..} headM44 eyeRenderFunc = do
     let viewM44 = inv44 headM44
     case gpHMD of
         NoHMD  -> do
             (x,y,w,h) <- getWindowViewport gpWindow
             glViewport x y w h
-            frameRenderFunc
             renderFlat gpWindow viewM44 eyeRenderFunc
             swapBuffers gpWindow
         OpenVRHMD openVR -> do
-            renderOpenVR openVR viewM44 frameRenderFunc eyeRenderFunc gpUseSDKMirror
+            renderOpenVR openVR viewM44 eyeRenderFunc gpUseSDKMirror
             when (not gpUseSDKMirror) $ do
                 -- This is a workaround to horrible regular stalls when calling swapBuffers on the main thread.
                 -- We use a one-slot MVar rather than a channel to avoid any memory leaks if the background
@@ -163,7 +162,7 @@ renderWith VRPal{..} headM44 frameRenderFunc eyeRenderFunc = do
                 void . liftIO $ tryPutMVar gpBackgroundSwap (swapBuffers gpWindow)
 #ifdef USE_OCULUS_SDK
         OculusHMD hmd -> 
-            renderOculus hmd playerPose frameRenderFunc eyeRenderFunc
+            renderOculus hmd playerPose eyeRenderFunc
 #endif
     
     
@@ -173,20 +172,16 @@ renderWith VRPal{..} headM44 frameRenderFunc eyeRenderFunc = do
 renderOpenVR :: (MonadIO m) 
              => OpenVR
              -> M44 GLfloat
-             -> m a
              -> (M44 GLfloat -> M44 GLfloat -> m a1)
              -> Bool
              -> m ()
-renderOpenVR OpenVR{..} viewM44 frameRenderFunc eyeRenderFunc useSDKMirror = do
+renderOpenVR OpenVR{..} viewM44 eyeRenderFunc useSDKMirror = do
 
     -- Render each eye, with multisampling
     forM_ ovrEyes $ \EyeInfo{..} -> do
 
         -- Will render into mfbResolveTextureID
         withMultisamplingFramebuffer eiMultisampleFramebuffer $ do
-            -- Must call this within loop since we have 2 different framebuffers
-            -- (so, get rid of it as a concept??)
-            _ <- frameRenderFunc
             let (x, y, w, h) = eiViewport
                 finalView    = eiEyeHeadTrans !*! viewM44
             glViewport x y w h

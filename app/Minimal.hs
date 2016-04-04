@@ -14,14 +14,15 @@ main = do
 
     vrPal@VRPal{..} <- initVRPal "VR Pal" [UseOpenVR]
     
-    whileVR vrPal $ \headM44 hands events -> do
-  
-        let pulse = do
+    whileWindow gpWindow $ do
+        (headM44, _vrEvents) <- tickVR vrPal identity
+
+        let pulseColor = do
                 now <- (/ 2) . (+ 1) . sin . realToFrac . utctDayTime <$> getNow vrPal
                 glClearColor 0.2 0.1 (now * 0.3) 1
     
-        renderWith vrPal newPose headM44  
-            (pulse >> glClear (GL_COLOR_BUFFER_BIT .|. GL_DEPTH_BUFFER_BIT))
-            (\projMat viewM44 -> return ())
+        renderWith vrPal headM44 $ \projMat viewM44 -> do 
+            pulseColor
+            glClear (GL_COLOR_BUFFER_BIT .|. GL_DEPTH_BUFFER_BIT)
     
         processEvents gpEvents $ \e -> closeOnEscape gpWindow e

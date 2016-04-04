@@ -3,9 +3,8 @@ packages:
 - '.'
 - '../gl-pal'
 - '../glfw-pal'
-# - '../oculus-mini'
-# - '../halive'
+- '../halive'
 - '../linear-extra'
 - '../lens-extra'
 - '../openvr-hs'
-resolver: nightly-2016-01-10
+resolver: nightly-2016-02-02

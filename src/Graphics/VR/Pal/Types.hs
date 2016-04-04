@@ -1,11 +1,14 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE DeriveGeneric #-}
 module Graphics.VR.Pal.Types where
 
 import Graphics.UI.GLFW.Pal
 
 import Data.Time
 import Data.IORef
+import Data.Hashable
+import GHC.Generics
 import Graphics.VR.OpenVR
 import Control.Concurrent
 import Control.Lens.Extra
@@ -58,7 +61,8 @@ data HandButton = HandButtonA
                 | HandButtonTrigger
                 deriving Show
 
-data WhichHand = LeftHand | RightHand deriving (Show, Eq)
+data WhichHand = LeftHand | RightHand deriving (Show, Eq, Generic)
+instance Hashable WhichHand
 
 data HandEvent = HandStateEvent  Hand
                | HandButtonEvent HandButton ButtonState

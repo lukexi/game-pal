@@ -29,6 +29,7 @@ library
     base,
     binary,
     mtl,
+    hashable,
     lens-extra,
     linear-extra,
     gl,
