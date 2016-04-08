@@ -19,10 +19,6 @@ import Data.IORef
 import Control.Concurrent
 --import Halive.Utils
 
-#ifdef USE_OCULUS_SDK
-import Graphics.Oculus
-#endif
-
 
 initVRPal :: String -> [VRPalDevices] -> IO VRPal
 initVRPal windowName devices = do
@@ -64,21 +60,15 @@ initVRPal windowName devices = do
                         else forM_ (ovrEyes openVR) $ \eye -> case eiEye eye of
                             LeftEye -> do
                                 let (_, _, w, h) = eiViewport eye
-                                setWindowSize window (fromIntegral w `div` 2) (fromIntegral h `div` 2)
+                                setWindowSize window (fromIntegral w) (fromIntegral h)
                                 return ()
                             _ -> return ()
-      
+                    
+                    -- Check if we're in the Vive or an Oculus by looking for lighthouses
                     roomScale <- isUsingLighthouse (ovrSystem openVR)
+
                     return (OpenVRHMD openVR, if roomScale then RoomScale else NotRoomScale)
                 Nothing -> return (NoHMD, NotRoomScale)
-#ifdef USE_OCULUS_SDK
-        | UseOculus `elem` devices && oculusSupported -> do
-            hmd <- createHMD
-            setWindowSize window 
-                (fromIntegral . fst . hmdBufferSize $ hmd) 
-                (fromIntegral . snd . hmdBufferSize $ hmd)
-            return (OculusHMD hmd, NotRoomScale)
-#endif
         | otherwise -> return (NoHMD, NotRoomScale)
     
     start    <- getCurrentTime
@@ -112,8 +102,12 @@ getDeltaTime VRPal{..} = liftIO (readIORef gpDeltaRef)
 getNow :: MonadIO m => VRPal -> m UTCTime
 getNow VRPal{..} = liftIO (readIORef gpTimeRef)
 
-tickVR :: MonadIO m => VRPal -> M44 GLfloat -> m (M44 GLfloat, [VREvent])
+tickVR :: MonadIO m => VRPal -> M44 GLfloat -> m (M44 GLfloat, [VRPalEvent])
 tickVR vrPal@VRPal{..} playerM44 = do
+    winEvents <- map GLFWEvent <$> gatherEvents gpEvents
+
+
+
     tickDelta vrPal
 
     case gpHMD of
@@ -131,13 +125,9 @@ tickVR vrPal@VRPal{..} playerM44 = do
 
             let vrEvents = HeadEvent headM44 : hands ++ (catMaybes $ map vrEventFromOpenVREvent events) 
 
-            return (headM44, vrEvents)
-#ifdef USE_OCULUS_SDK
-        OculusHMD hmd -> 
-            headM44 <- liftIO (getHMDPose (hmdInfo hmd))
-            return (headM44, [])
-#endif
-        _ -> return (playerM44, [])
+            return (headM44, winEvents ++ map VREvent vrEvents)
+        _ -> 
+            return (playerM44, winEvents)
 
 renderWith :: MonadIO m
            => VRPal
@@ -160,14 +150,10 @@ renderWith VRPal{..} headM44 eyeRenderFunc = do
                 -- thread can't keep up - it's not important to update the mirror window on any particular
                 -- schedule as long as it happens semi-regularly. 
                 void . liftIO $ tryPutMVar gpBackgroundSwap (swapBuffers gpWindow)
-#ifdef USE_OCULUS_SDK
-        OculusHMD hmd -> 
-            renderOculus hmd playerPose eyeRenderFunc
-#endif
     
     
     -- when gpGCPerFrame $ 
-    --   profile "GC" 0 $ liftIO performGC
+    --   profile "GC" 0 $ liftIO performMinorGC
 
 renderOpenVR :: (MonadIO m) 
              => OpenVR
@@ -194,31 +180,10 @@ renderOpenVR OpenVR{..} viewM44 eyeRenderFunc useSDKMirror = do
         let MultisampleFramebuffer{..} = eiMultisampleFramebuffer
         submitFrameForEye ovrCompositor eiEye (unTextureID mfbResolveTextureID)
 
-    -- Finally, mirror.
-    when (not useSDKMirror) $ forM_ (listToMaybe ovrEyes) $ \eye -> do
-        -- Duplicating Valve hacks from hellovr_opengl sample in openvr repo
-        mirrorOpenVREyeToWindow eye
-        
-
-
-
-#ifdef USE_OCULUS_SDK
-renderOculus :: MonadIO m 
-             => HMD
-             -> Pose GLfloat 
-             -> m ()
-             -> (M44 GLfloat -> M44 GLfloat -> m b) -> m ()
-renderOculus hmd playerPose frameRenderFunc eyeRenderFunc = do
-    renderHMDFrame hmd $ \eyeViews -> do
-        frameRenderFunc
-        
-        renderHMDEyes eyeViews $ \projection eyeView -> do
-      
-            let finalView = eyeView !*! viewMatrixFromPose playerPose
-      
-            eyeRenderFunc projection finalView 
-    renderHMDMirror hmd
-#endif
+    -- Mirror one eye to the window
+    when (not useSDKMirror) $ do
+        let oneEye = listToMaybe ovrEyes
+        forM_ oneEye mirrorOpenVREyeToWindow 
 
 renderFlat :: MonadIO m 
            => Window -> M44 GLfloat -> (M44 GLfloat -> M44 GLfloat -> m b) -> m ()
@@ -232,9 +197,6 @@ renderFlat win viewM44 renderFunc = do
 
 recenterSeatedPose :: MonadIO m => VRPal -> m ()
 recenterSeatedPose gamePal = case gpHMD gamePal of
-#ifdef USE_OCULUS_SDK
-    OculusHMD hmd -> liftIO (recenterPose hmd)
-#endif
     OpenVRHMD openVR -> resetSeatedZeroPose (ovrSystem openVR)
     _ -> return ()
 

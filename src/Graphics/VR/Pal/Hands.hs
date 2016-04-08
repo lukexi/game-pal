@@ -65,6 +65,7 @@ vrEventFromOpenVREvent (VREventButtonUnpress controllerRole button) = handButton
 vrEventFromOpenVREvent (VREventButtonTouch   controllerRole button) = handButtonEventFromOpenVREvent controllerRole button ButtonTouch
 vrEventFromOpenVREvent (VREventButtonUntouch controllerRole button) = handButtonEventFromOpenVREvent controllerRole button ButtonUntouch
 
+handButtonEventFromOpenVREvent :: TrackedControllerRole -> EButton -> ButtonState -> Maybe VREvent
 handButtonEventFromOpenVREvent controllerRole button buttonState = do
     whichHand <- trackedControllerRoleToWhichHand controllerRole
     handButton  <- eButtonToHandButton button

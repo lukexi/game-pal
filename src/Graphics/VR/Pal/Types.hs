@@ -14,9 +14,6 @@ import Control.Concurrent
 import Control.Lens.Extra
 import Linear.Extra
 import Graphics.GL
-#ifdef USE_OCULUS_SDK
-import Graphics.Oculus
-#endif
 
 -- | Passed to init to determine which devices to initialize
 data VRPalDevices = UseOpenVR | UseOculus deriving (Eq, Show, Ord)
@@ -29,9 +26,6 @@ data RoomScale = RoomScale | NotRoomScale deriving (Eq, Show, Ord)
 
 data HMDType = NoHMD 
              | OpenVRHMD OpenVR
-#ifdef USE_OCULUS_SDK
-             | OculusHMD HMD
-#endif
 
 data VRPal = VRPal
     { gpWindow               :: !Window
