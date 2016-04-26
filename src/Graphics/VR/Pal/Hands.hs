@@ -86,3 +86,19 @@ hideHandKeyboard :: MonadIO m => VRPal -> m ()
 hideHandKeyboard VRPal{..} = case gpHMD of
     OpenVRHMD _ -> hideKeyboard
     _ -> return ()
+
+
+
+onLeftHandEvent :: Monad m => VRPalEvent -> (HandEvent -> m ()) -> m ()
+onLeftHandEvent (VREvent (HandEvent LeftHand handEvent)) f = f handEvent
+onLeftHandEvent _ _ = return ()
+
+onRightHandEvent :: Monad m => VRPalEvent -> (HandEvent -> m ()) -> m ()
+onRightHandEvent (VREvent (HandEvent RightHand handEvent)) f = f handEvent
+onRightHandEvent _ _ = return ()
+
+onHandEvent :: Monad m => WhichHand -> VRPalEvent -> (HandEvent -> m ()) -> m ()
+onHandEvent desiredHand (VREvent (HandEvent eventHand handEvent)) f 
+    | desiredHand == eventHand = f handEvent
+onHandEvent _ _ _ = return ()
+

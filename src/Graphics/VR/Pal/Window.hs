@@ -102,11 +102,12 @@ getDeltaTime VRPal{..} = liftIO (readIORef gpDeltaRef)
 getNow :: MonadIO m => VRPal -> m UTCTime
 getNow VRPal{..} = liftIO (readIORef gpTimeRef)
 
+logIO :: MonadIO m => String -> m ()
+logIO = liftIO . putStrLn
+
 tickVR :: MonadIO m => VRPal -> M44 GLfloat -> m (M44 GLfloat, [VRPalEvent])
 tickVR vrPal@VRPal{..} playerM44 = do
     winEvents <- map GLFWEvent <$> gatherEvents gpEvents
-
-
 
     tickDelta vrPal
 
