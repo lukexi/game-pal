@@ -112,9 +112,9 @@ tickVR vrPal@VRPal{..} playerM44 = do
     tickDelta vrPal
 
     case gpHMD of
-        OpenVRHMD OpenVR{..} -> do
-            events                    <- pollNextEvent ovrSystem
-            (headM44Raw, handM44sByRole) <- waitGetPoses ovrCompositor ovrSystem
+        OpenVRHMD openVR@OpenVR{..} -> do
+            events                       <- pollNextEvent ovrSystem
+            (headM44Raw, handM44sByRole) <- waitGetPoses openVR
             let headM44 = playerM44 !*! headM44Raw 
       
             hands <- catMaybes <$> forM handM44sByRole (\(controllerRole, handM44Raw) -> do
