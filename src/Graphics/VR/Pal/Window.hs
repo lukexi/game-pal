@@ -22,24 +22,24 @@ import Control.Concurrent
 
 initVRPal :: String -> [VRPalDevices] -> IO VRPal
 initVRPal windowName devices = do
-  
+
     -- Calling swapBuffers triggers a ton of dropped frames. Valve's
     -- mirroring doesn't seem to trigger this problem.
     let useSDKMirror = False
-  
-    -- Turn off garbage collection per frame when Halive is active, 
+
+    -- Turn off garbage collection per frame when Halive is active,
     -- as it grinds things to a halt (I don't know why)
     --doGCPerFrame <- not <$> isHaliveActive
     let doGCPerFrame = False
-  
+
     let (resX, resY) = (500, 400)
-    
+
     (window, events) <- createWindow windowName resX resY
-  
-  
+
+
     swapInterval 0
-  
-    (hmdType, isRoomScale) <- if 
+
+    (hmdType, isRoomScale) <- if
         | UseOpenVR `elem` devices -> do
             hmdPresent <- isHMDPresent
             mOpenVR <- if hmdPresent then createOpenVR else return Nothing
@@ -47,7 +47,7 @@ initVRPal windowName devices = do
                 Just openVR -> do
                     -- Disable the cursor
                     --setCursorInputMode window CursorInputMode'Disabled
-                            
+
                     if useSDKMirror
                         then do
                             showMirrorWindow (ovrCompositor openVR)
@@ -61,27 +61,28 @@ initVRPal windowName devices = do
                             LeftEye -> do
                                 let (_, _, w, h) = eiViewport eye
                                 setWindowSize window (fromIntegral w) (fromIntegral h)
+                                setWindowPosition window 0 0
                                 return ()
                             _ -> return ()
-                    
+
                     -- Check if we're in the Vive or an Oculus by looking for lighthouses
                     roomScale <- isUsingLighthouse (ovrSystem openVR)
 
                     return (OpenVRHMD openVR, if roomScale then RoomScale else NotRoomScale)
                 Nothing -> return (NoHMD, NotRoomScale)
         | otherwise -> return (NoHMD, NotRoomScale)
-    
+
     start    <- getCurrentTime
     timeRef  <- newIORef start
     deltaRef <- newIORef 0
-  
+
     emulatedHandDepthRef <- newIORef 1
-    
+
     -- See note in renderWith
     backgroundSwap <- newEmptyMVar
     _ <- forkIO . forever $ do
         action <- takeMVar backgroundSwap
-        action  
+        action
 
     return VRPal
         { gpWindow               = window
@@ -115,19 +116,19 @@ tickVR vrPal@VRPal{..} playerM44 = do
         OpenVRHMD openVR@OpenVR{..} -> do
             events                       <- pollNextEvent ovrSystem
             (headM44Raw, handM44sByRole) <- waitGetPoses openVR
-            let headM44 = playerM44 !*! headM44Raw 
-      
+            let headM44 = playerM44 !*! headM44Raw
+
             hands <- catMaybes <$> forM handM44sByRole (\(controllerRole, handM44Raw) -> do
                 forM (trackedControllerRoleToWhichHand controllerRole) $ \whichHand -> do
                     buttonStates <- getControllerState ovrSystem controllerRole
-                    let handM44 = playerM44 !*! handM44Raw 
+                    let handM44 = playerM44 !*! handM44Raw
                     return $ HandEvent whichHand (HandStateEvent (handFromOpenVRController handM44 buttonStates))
                 )
 
-            let vrEvents = HeadEvent headM44 : hands ++ (catMaybes $ map vrEventFromOpenVREvent events) 
+            let vrEvents = HeadEvent headM44 : hands ++ (catMaybes $ map vrEventFromOpenVREvent events)
 
             return (headM44, winEvents ++ map VREvent vrEvents)
-        _ -> 
+        _ ->
             return (playerM44, winEvents)
 
 renderWith :: MonadIO m
@@ -144,25 +145,31 @@ renderWith VRPal{..} headM44 eyeRenderFunc = do
             renderFlat gpWindow viewM44 eyeRenderFunc
             swapBuffers gpWindow
         OpenVRHMD openVR -> do
-            renderOpenVR openVR viewM44 eyeRenderFunc gpUseSDKMirror
+            renderOpenVR openVR viewM44 eyeRenderFunc
             when (not gpUseSDKMirror) $ do
+                (w,h) <- getWindowSize gpWindow
+                -- Mirror one eye to the window
+                let oneEye = listToMaybe (ovrEyes openVR)
+                forM_ oneEye (\eye -> mirrorOpenVREyeToWindow eye (fromIntegral w) (fromIntegral h))
+
                 -- This is a workaround to horrible regular stalls when calling swapBuffers on the main thread.
                 -- We use a one-slot MVar rather than a channel to avoid any memory leaks if the background
                 -- thread can't keep up - it's not important to update the mirror window on any particular
-                -- schedule as long as it happens semi-regularly. 
+                -- schedule as long as it happens semi-regularly.
                 void . liftIO $ tryPutMVar gpBackgroundSwap (swapBuffers gpWindow)
-    
-    
-    -- when gpGCPerFrame $ 
+
+
+
+
+    -- when gpGCPerFrame $
     --   profile "GC" 0 $ liftIO performMinorGC
 
-renderOpenVR :: (MonadIO m) 
+renderOpenVR :: (MonadIO m)
              => OpenVR
              -> M44 GLfloat
              -> (M44 GLfloat -> M44 GLfloat -> m a1)
-             -> Bool
              -> m ()
-renderOpenVR OpenVR{..} viewM44 eyeRenderFunc useSDKMirror = do
+renderOpenVR OpenVR{..} viewM44 eyeRenderFunc = do
 
     -- Render each eye, with multisampling
     forM_ ovrEyes $ \EyeInfo{..} -> do
@@ -172,7 +179,7 @@ renderOpenVR OpenVR{..} viewM44 eyeRenderFunc useSDKMirror = do
             let (x, y, w, h) = eiViewport
                 finalView    = eiEyeHeadTrans !*! viewM44
             glViewport x y w h
-          
+
             _ <- eyeRenderFunc eiProjection finalView
             return ()
 
@@ -181,19 +188,16 @@ renderOpenVR OpenVR{..} viewM44 eyeRenderFunc useSDKMirror = do
         let MultisampleFramebuffer{..} = eiMultisampleFramebuffer
         submitFrameForEye ovrCompositor eiEye (unTextureID mfbResolveTextureID)
 
-    -- Mirror one eye to the window
-    when (not useSDKMirror) $ do
-        let oneEye = listToMaybe ovrEyes
-        forM_ oneEye mirrorOpenVREyeToWindow 
 
-renderFlat :: MonadIO m 
+
+renderFlat :: MonadIO m
            => Window -> M44 GLfloat -> (M44 GLfloat -> M44 GLfloat -> m b) -> m ()
 renderFlat win viewM44 renderFunc = do
-    
+
     projection  <- getWindowProjection win 45 0.1 1000
-    
+
     _           <- renderFunc projection viewM44
-  
+
     return ()
 
 recenterSeatedPose :: MonadIO m => VRPal -> m ()
@@ -206,8 +210,8 @@ tickDelta :: MonadIO m => VRPal -> m ()
 tickDelta VRPal{..} = liftIO $ do
     lastTime <- readIORef gpTimeRef
     currTime <- getCurrentTime
-  
+
     let diffTime = diffUTCTime currTime lastTime
-  
+
     writeIORef gpTimeRef currTime
     writeIORef gpDeltaRef diffTime
