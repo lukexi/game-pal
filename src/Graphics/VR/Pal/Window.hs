@@ -34,7 +34,7 @@ initVRPal windowName devices = do
 
     let (resX, resY) = (500, 400)
 
-    (window, events) <- createWindow windowName resX resY
+    (window, threadWin, events) <- createWindow windowName resX resY
 
 
     swapInterval 0
@@ -86,6 +86,7 @@ initVRPal windowName devices = do
 
     return VRPal
         { gpWindow               = window
+        , gpThreadWindow         = threadWin
         , gpEvents               = events
         , gpHMD                  = hmdType
         , gpTimeRef              = timeRef

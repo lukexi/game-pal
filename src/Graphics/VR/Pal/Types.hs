@@ -24,11 +24,12 @@ data GCPerFrame = GCPerFrame | NoGCPerFrame deriving (Eq, Show, Ord)
 -- | Indicates when we're using the Vive
 data RoomScale = RoomScale | NotRoomScale deriving (Eq, Show, Ord)
 
-data HMDType = NoHMD 
+data HMDType = NoHMD
              | OpenVRHMD OpenVR
 
 data VRPal = VRPal
     { gpWindow               :: !Window
+    , gpThreadWindow         :: !Window
     , gpEvents               :: !Events
     , gpHMD                  :: !HMDType
     , gpTimeRef              :: !(IORef UTCTime)
