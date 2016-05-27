@@ -202,10 +202,15 @@ renderFlat win viewM44 renderFunc = do
     return ()
 
 recenterSeatedPose :: MonadIO m => VRPal -> m ()
-recenterSeatedPose gamePal = case gpHMD gamePal of
+recenterSeatedPose vrPal = case gpHMD vrPal of
     OpenVRHMD openVR -> resetSeatedZeroPose (ovrSystem openVR)
     _ -> return ()
 
+
+fadeVRToColor :: MonadIO m => VRPal -> V4 GLfloat -> GLfloat -> m ()
+fadeVRToColor vrPal color time = case gpHMD vrPal of
+    OpenVRHMD openVR -> fadeCompositorToColor (ovrCompositor openVR) color time
+    _ -> return ()
 
 tickDelta :: MonadIO m => VRPal -> m ()
 tickDelta VRPal{..} = liftIO $ do
