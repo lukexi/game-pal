@@ -7,12 +7,11 @@
 module Main where
 
 import Graphics.VR.Pal
-import Graphics.UI.GLFW.Pal
 import Graphics.GL.Pal
 import Data.Time
 import Control.Lens.Extra
 import Control.Monad
-import Control.Monad.Trans
+import Control.Monad.State
 
 data Uniforms = Uniforms
     { uModelViewProjection :: UniformLocation (M44 GLfloat)
@@ -54,9 +53,11 @@ main = do
     glEnable GL_DEPTH_TEST
     useProgram (sProgram cubeShape)
 
-    whileWindow gpWindow $ do
-        (headM44, events) <- tickVR vrPal identity
-        forM_ events $ \case
+    void . flip runStateT identity . whileWindow gpWindow $ do
+        playerM44 <- get
+        (headM44, events) <- tickVR vrPal playerM44
+        applyWASD gpWindow (iso poseFromMatrix transformationFromPose)
+        forM events $ \case
             GLFWEvent e -> closeOnEscape gpWindow e
             _ -> return ()
 
