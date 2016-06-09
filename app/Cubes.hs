@@ -57,12 +57,15 @@ main = do
         playerM44 <- get
         (headM44, events) <- tickVR vrPal playerM44
         applyWASD gpWindow (iso poseFromMatrix transformationFromPose)
-        forM events $ \case
+        forM_ events $ \case
             GLFWEvent e -> closeOnEscape gpWindow e
             _ -> return ()
-
+        let handStates = flip concatMap events $ \case
+                VREvent (HandEvent _ (HandStateEvent handState)) -> [handState]
+                _                                                -> []
+            handCubes = map (\hand -> Cube { _cubColor = 1, _cubMatrix = hand ^. hndMatrix }) handStates
         renderWith vrPal headM44
-            (render cubeShape worldCubes)
+            (render cubeShape (handCubes ++ worldCubes))
 
 render :: (MonadIO m)
        => Shape Uniforms
