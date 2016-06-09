@@ -1,16 +1,30 @@
+{-# LANGUAGE MultiWayIf #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE ViewPatterns #-}
+module Graphics.VR.Pal.Emulation where
+import Graphics.UI.GLFW.Pal
+import Control.Monad
 
-emulateRightHand :: (MonadIO m) => VRPal -> Pose Float -> [VRPalEvent] -> m [Hand]
-emulateRightHand VRPal{..} player events = do
+import Control.Monad.Trans
+import Linear.Extra
+import Control.Lens.Extra
+import Graphics.VR.Pal.Types
+import Graphics.VR.Pal.Hands
+import Graphics.GL.Pal
+import Data.IORef
+
+emulateRightHand :: (MonadIO m) => VRPal -> M44 GLfloat -> [Event] -> m [VRPalEvent]
+emulateRightHand VRPal{..} playerM44 events = do
 
     projM44     <- getWindowProjection gpWindow 45 0.1 1000
-    mouseRay    <- cursorPosToWorldRay gpWindow projM44 player
+    mouseRay    <- cursorPosToWorldRay gpWindow projM44 (poseFromMatrix playerM44)
     mouseState1 <- getMouseButton gpWindow MouseButton'1
     mouseState2 <- getMouseButton gpWindow MouseButton'2
 
-    forM_ events $ \case
-        GLFWEvent e -> onScroll e $ \_x y ->
+    forM_ events $ \e ->
+        onScroll e $ \_x y ->
             liftIO $ modifyIORef' gpEmulatedHandDepthRef (+ (y*0.1))
-        _ -> return ()
     handZ <- liftIO (readIORef gpEmulatedHandDepthRef)
     -- a <- getNow -- swap with line below to rotate hand for testing
     let a = 0
@@ -24,7 +38,9 @@ emulateRightHand VRPal{..} player events = do
                 & hndMatrix  .~ handMatrix
                 & hndTrigger .~ trigger
                 & hndGrip    .~ grip
-    return [emptyHand, rightHand]
+
+    let handStateEvent = HandEvent RightHand (HandStateEvent rightHand)
+    return (map VREvent [handStateEvent])
 
 emulateRightHandVR :: (MonadIO m) => VRPal -> Pose Float -> [VRPalEvent] -> m [Hand]
 emulateRightHandVR VRPal{..} _player events = do

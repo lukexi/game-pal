@@ -11,6 +11,7 @@ import Control.Monad.Trans
 import Linear.Extra
 import Graphics.VR.Pal.Types
 import Graphics.VR.Pal.Hands
+import Graphics.VR.Pal.Emulation
 import Graphics.GL.Pal
 import Data.Maybe
 -- import System.Mem
@@ -109,7 +110,8 @@ logIO = liftIO . putStrLn
 
 tickVR :: MonadIO m => VRPal -> M44 GLfloat -> m (M44 GLfloat, [VRPalEvent])
 tickVR vrPal@VRPal{..} playerM44 = do
-    winEvents <- map GLFWEvent <$> gatherEvents gpEvents
+    glfwEvents <- gatherEvents gpEvents
+    let winEvents = map GLFWEvent glfwEvents
 
     tickDelta vrPal
 
@@ -129,8 +131,9 @@ tickVR vrPal@VRPal{..} playerM44 = do
             let vrEvents = HeadEvent headM44 : hands ++ (catMaybes $ map vrEventFromOpenVREvent events)
 
             return (headM44, winEvents ++ map VREvent vrEvents)
-        _ ->
-            return (playerM44, winEvents)
+        _ -> do
+            emulatedVREvents <- emulateRightHand vrPal playerM44 glfwEvents
+            return (playerM44, winEvents ++ emulatedVREvents)
 
 renderWith :: MonadIO m
            => VRPal
