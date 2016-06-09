@@ -28,17 +28,17 @@ data HMDType = NoHMD
              | OpenVRHMD OpenVR
 
 data VRPal = VRPal
-    { gpWindow               :: !Window
-    , gpThreadWindow         :: !Window
-    , gpEvents               :: !Events
-    , gpHMD                  :: !HMDType
-    , gpTimeRef              :: !(IORef UTCTime)
-    , gpDeltaRef             :: !(IORef NominalDiffTime)
-    , gpGCPerFrame           :: !Bool
-    , gpUseSDKMirror         :: !Bool
-    , gpRoomScale            :: !RoomScale
-    , gpEmulatedHandDepthRef :: !(IORef Float)
-    , gpBackgroundSwap       :: !(MVar (IO ()))
+    { gpWindow          :: !Window
+    , gpThreadWindow    :: !Window
+    , gpEvents          :: !Events
+    , gpHMD             :: !HMDType
+    , gpTimeRef         :: !(IORef UTCTime)
+    , gpDeltaRef        :: !(IORef NominalDiffTime)
+    , gpGCPerFrame      :: !Bool
+    , gpUseSDKMirror    :: !Bool
+    , gpRoomScale       :: !RoomScale
+    , gpEmulatedHandRef :: !(IORef (Float, V3 GLfloat))
+    , gpBackgroundSwap  :: !(MVar (IO ()))
     }
 
 

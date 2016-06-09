@@ -77,7 +77,7 @@ initVRPal windowName devices = do
     timeRef  <- newIORef start
     deltaRef <- newIORef 0
 
-    emulatedHandDepthRef <- newIORef 1
+    emulatedHandDepthRef <- newIORef (1, V3 0 0 0)
 
     -- See note in renderWith
     backgroundSwap <- newEmptyMVar
@@ -86,17 +86,17 @@ initVRPal windowName devices = do
         action
 
     return VRPal
-        { gpWindow               = window
-        , gpThreadWindow         = threadWin
-        , gpEvents               = events
-        , gpHMD                  = hmdType
-        , gpTimeRef              = timeRef
-        , gpDeltaRef             = deltaRef
-        , gpGCPerFrame           = doGCPerFrame
-        , gpRoomScale            = isRoomScale
-        , gpUseSDKMirror         = case hmdType of { NoHMD -> False; _ -> useSDKMirror }
-        , gpEmulatedHandDepthRef = emulatedHandDepthRef
-        , gpBackgroundSwap       = backgroundSwap
+        { gpWindow          = window
+        , gpThreadWindow    = threadWin
+        , gpEvents          = events
+        , gpHMD             = hmdType
+        , gpTimeRef         = timeRef
+        , gpDeltaRef        = deltaRef
+        , gpGCPerFrame      = doGCPerFrame
+        , gpRoomScale       = isRoomScale
+        , gpUseSDKMirror    = case hmdType of { NoHMD -> False; _ -> useSDKMirror }
+        , gpEmulatedHandRef = emulatedHandDepthRef
+        , gpBackgroundSwap  = backgroundSwap
         }
 
 getDeltaTime :: MonadIO m => VRPal -> m NominalDiffTime
@@ -132,7 +132,7 @@ tickVR vrPal@VRPal{..} playerM44 = do
 
             return (headM44, winEvents ++ map VREvent vrEvents)
         _ -> do
-            emulatedVREvents <- emulateRightHand vrPal playerM44 glfwEvents
+            emulatedVREvents <- emulateRightHandScreen vrPal playerM44 glfwEvents
             return (playerM44, winEvents ++ emulatedVREvents)
 
 renderWith :: MonadIO m
