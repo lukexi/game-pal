@@ -29,10 +29,10 @@ emulateRightHandScreen VRPal{..} playerM44 events = do
         readHand   = liftIO (readIORef gpEmulatedHandRef)
 
 
-    whenKeyPressed gpWindow Key'Z $ modifyHand (second (_x -~ 0.005))
-    whenKeyPressed gpWindow Key'X $ modifyHand (second (_x +~ 0.005))
-    whenKeyPressed gpWindow Key'C $ modifyHand (second (_y -~ 0.005))
-    whenKeyPressed gpWindow Key'V $ modifyHand (second (_y +~ 0.005))
+    whenKeyPressed gpWindow Key'Z $ modifyHand (second (_x +~ 0.005))
+    whenKeyPressed gpWindow Key'X $ modifyHand (second (_x -~ 0.005))
+    whenKeyPressed gpWindow Key'C $ modifyHand (second (_y +~ 0.005))
+    whenKeyPressed gpWindow Key'V $ modifyHand (second (_y -~ 0.005))
 
     handEvents <- fmap concat . forM events $ \e -> do
         onScroll e $ \_x y ->
