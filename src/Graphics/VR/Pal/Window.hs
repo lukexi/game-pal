@@ -20,9 +20,14 @@ import Data.IORef
 import Control.Concurrent
 --import Halive.Utils
 
+initVRPalDebug :: String -> [VRPalDevices] -> IO VRPal
+initVRPalDebug = initVRPal' True
 
 initVRPal :: String -> [VRPalDevices] -> IO VRPal
-initVRPal windowName devices = do
+initVRPal = initVRPal' False
+
+initVRPal' :: Bool -> String -> [VRPalDevices] -> IO VRPal
+initVRPal' debug windowName devices = do
 
     -- Calling swapBuffers triggers a ton of dropped frames. Valve's
     -- mirroring doesn't seem to trigger this problem.
@@ -35,7 +40,7 @@ initVRPal windowName devices = do
 
     let (resX, resY) = (500, 400)
 
-    (window, threadWin, events) <- createWindow windowName resX resY
+    (window, threadWin, events) <- createWindow' debug windowName resX resY
 
 
     swapInterval 0
