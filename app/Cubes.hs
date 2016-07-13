@@ -43,7 +43,7 @@ worldCubes = [cubeAt x y z | x <- [-5..5], y <- [-2..2], z <- [-5..5] ]
 main :: IO ()
 main = do
 
-    vrPal@VRPal{..} <- initVRPal "VR Pal" [UseOpenVR]
+    vrPal@VRPal{..} <- initVRPal "VR Pal"
 
     cubeProg   <- createShaderProgram "app/cube.vert" "app/cube.frag"
     cubeGeo    <- cubeGeometry (0.1 :: V3 GLfloat) (V3 1 1 1)
@@ -72,8 +72,10 @@ render :: (MonadIO m)
        -> [Cube]
        -> M44 GLfloat
        -> M44 GLfloat
+       -> V4 GLfloat
+       -> V4 GLfloat
        -> m ()
-render cubeShape cubes projM44 viewM44  = do
+render cubeShape cubes projM44 viewM44 projRaw viewport = do
     glClear (GL_COLOR_BUFFER_BIT .|. GL_DEPTH_BUFFER_BIT)
 
     let Uniforms{..} = sUniforms cubeShape

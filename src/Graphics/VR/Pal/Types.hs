@@ -13,7 +13,20 @@ import Graphics.VR.OpenVR
 import Control.Concurrent
 import Control.Lens.Extra
 import Linear.Extra
-import Graphics.GL
+import Graphics.GL.Pal
+
+data VRPalConfig = VRPalConfig
+    { vpcUseGLDebug :: Bool
+    , vpcMSAASamples :: MSAASamples
+    , vpcDevices :: [VRPalDevices]
+    }
+
+defaultVRPalConfig :: VRPalConfig
+defaultVRPalConfig = VRPalConfig
+    { vpcUseGLDebug = False
+    , vpcMSAASamples = MSAASamples16
+    , vpcDevices = [UseOpenVR]
+    }
 
 -- | Passed to init to determine which devices to initialize
 data VRPalDevices = UseOpenVR | UseOculus deriving (Eq, Show, Ord)

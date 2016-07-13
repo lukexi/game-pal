@@ -20,14 +20,11 @@ import Data.IORef
 import Control.Concurrent
 --import Halive.Utils
 
-initVRPalDebug :: String -> [VRPalDevices] -> IO VRPal
-initVRPalDebug = initVRPal' True
+initVRPal :: String -> IO VRPal
+initVRPal windowName = initVRPalWithConfig windowName defaultVRPalConfig
 
-initVRPal :: String -> [VRPalDevices] -> IO VRPal
-initVRPal = initVRPal' False
-
-initVRPal' :: Bool -> String -> [VRPalDevices] -> IO VRPal
-initVRPal' debug windowName devices = do
+initVRPalWithConfig :: String -> VRPalConfig -> IO VRPal
+initVRPalWithConfig windowName VRPalConfig{..} = do
 
     -- Calling swapBuffers triggers a ton of dropped frames. Valve's
     -- mirroring doesn't seem to trigger this problem.
@@ -40,15 +37,16 @@ initVRPal' debug windowName devices = do
 
     let (resX, resY) = (500, 400)
 
-    (window, threadWin, events) <- createWindow' debug windowName resX resY
+    (window, threadWin, events) <- createWindow' vpcUseGLDebug windowName resX resY
 
 
     swapInterval 0
 
     (hmdType, isRoomScale) <- if
-        | UseOpenVR `elem` devices -> do
+        | UseOpenVR `elem` vpcDevices -> do
             hmdPresent <- isHMDPresent
-            mOpenVR <- if hmdPresent then createOpenVR else return Nothing
+            let openVRConfig = defaultOpenVRConfig { ovcMSAASamples = vpcMSAASamples }
+            mOpenVR <- if hmdPresent then createOpenVRWithConfig openVRConfig else return Nothing
             case mOpenVR of
                 Just openVR -> do
                     -- Disable the cursor
@@ -143,7 +141,7 @@ tickVR vrPal@VRPal{..} playerM44 = do
 renderWith :: MonadIO m
            => VRPal
            -> M44 GLfloat
-           -> (M44 GLfloat -> M44 GLfloat -> m b)
+           -> (M44 GLfloat -> M44 GLfloat -> V4 GLfloat -> V4 GLfloat -> m b)
            -> m ()
 renderWith VRPal{..} headM44 eyeRenderFunc = do
     let viewM44 = inv44 headM44
@@ -151,7 +149,7 @@ renderWith VRPal{..} headM44 eyeRenderFunc = do
         NoHMD  -> do
             (x,y,w,h) <- getWindowViewport gpWindow
             glViewport x y w h
-            renderFlat gpWindow viewM44 eyeRenderFunc
+            renderFlat gpWindow viewM44 (\p fv -> eyeRenderFunc p fv 0 0)
             swapBuffers gpWindow
         OpenVRHMD openVR -> do
             renderOpenVR openVR viewM44 eyeRenderFunc
@@ -167,16 +165,13 @@ renderWith VRPal{..} headM44 eyeRenderFunc = do
                 -- schedule as long as it happens semi-regularly.
                 void . liftIO $ tryPutMVar gpBackgroundSwap (swapBuffers gpWindow)
 
-
-
-
     -- when gpGCPerFrame $
     --   profile "GC" 0 $ liftIO performMinorGC
 
 renderOpenVR :: (MonadIO m)
              => OpenVR
              -> M44 GLfloat
-             -> (M44 GLfloat -> M44 GLfloat -> m a1)
+             -> (M44 GLfloat -> M44 GLfloat -> V4 GLfloat -> V4 GLfloat -> m a1)
              -> m ()
 renderOpenVR OpenVR{..} viewM44 eyeRenderFunc = do
 
@@ -186,10 +181,11 @@ renderOpenVR OpenVR{..} viewM44 eyeRenderFunc = do
         -- Will render into mfbResolveTextureID
         withMultisamplingFramebuffer eiMultisampleFramebuffer $ do
             let (x, y, w, h) = eiViewport
+                viewport     = realToFrac <$> V4 x y w h
                 finalView    = eiEyeHeadTrans !*! viewM44
             glViewport x y w h
 
-            _ <- eyeRenderFunc eiProjection finalView
+            _ <- eyeRenderFunc eiProjection finalView eiProjectionRaw viewport
             return ()
 
     -- Submit frames after rendering both
