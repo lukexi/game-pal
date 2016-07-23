@@ -38,9 +38,10 @@ initVRPalWithConfig windowName VRPalConfig{..} = do
     let (resX, resY) = (500, 400)
 
     (window, threadWin, events) <- createWindow' vpcUseGLDebug windowName resX resY
-
-
     swapInterval 0
+    glClear GL_COLOR_BUFFER_BIT
+    swapBuffers window
+
 
     (hmdType, isRoomScale) <- if
         | UseOpenVR `elem` vpcDevices -> do
@@ -75,6 +76,9 @@ initVRPalWithConfig windowName VRPalConfig{..} = do
                     return (OpenVRHMD openVR, if roomScale then RoomScale else NotRoomScale)
                 Nothing -> return (NoHMD, NotRoomScale)
         | otherwise -> return (NoHMD, NotRoomScale)
+
+    glClear GL_COLOR_BUFFER_BIT
+    swapBuffers window
 
     start    <- getCurrentTime
     timeRef  <- newIORef start
@@ -163,7 +167,8 @@ renderWith VRPal{..} headM44 eyeRenderFunc = do
                 -- We use a one-slot MVar rather than a channel to avoid any memory leaks if the background
                 -- thread can't keep up - it's not important to update the mirror window on any particular
                 -- schedule as long as it happens semi-regularly.
-                void . liftIO $ tryPutMVar gpBackgroundSwap (swapBuffers gpWindow)
+                swapBuffers gpWindow
+                --void . liftIO $ tryPutMVar gpBackgroundSwap (swapBuffers gpWindow)
 
     -- when gpGCPerFrame $
     --   profile "GC" 0 $ liftIO performMinorGC

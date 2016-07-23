@@ -24,7 +24,7 @@ data VRPalConfig = VRPalConfig
 defaultVRPalConfig :: VRPalConfig
 defaultVRPalConfig = VRPalConfig
     { vpcUseGLDebug = False
-    , vpcMSAASamples = MSAASamples16
+    , vpcMSAASamples = MSAASamples8
     , vpcDevices = [UseOpenVR]
     }
 
