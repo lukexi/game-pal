@@ -3,7 +3,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE CPP #-}
 module Graphics.VR.Pal.Window where
-import Graphics.UI.GLFW.Pal
+import Graphics.VR.Pal.SDLUtils
 import Graphics.VR.OpenVR
 import Control.Monad
 
@@ -14,33 +14,21 @@ import Graphics.VR.Pal.Hands
 import Graphics.VR.Pal.Emulation
 import Graphics.GL.Pal
 import Data.Maybe
--- import System.Mem
 import Data.Time
 import Data.IORef
-import Control.Concurrent
---import Halive.Utils
+import SDL
+import Data.Text (Text)
 
-initVRPal :: String -> IO VRPal
+initVRPal :: Text -> IO VRPal
 initVRPal windowName = initVRPalWithConfig windowName defaultVRPalConfig
 
-initVRPalWithConfig :: String -> VRPalConfig -> IO VRPal
+initVRPalWithConfig :: Text -> VRPalConfig -> IO VRPal
 initVRPalWithConfig windowName VRPalConfig{..} = do
 
-    -- Calling swapBuffers triggers a ton of dropped frames. Valve's
-    -- mirroring doesn't seem to trigger this problem.
-    let useSDKMirror = False
-
-    -- Turn off garbage collection per frame when Halive is active,
-    -- as it grinds things to a halt (I don't know why)
-    --doGCPerFrame <- not <$> isHaliveActive
-    let doGCPerFrame = False
-
-    let (resX, resY) = (500, 400)
-
-    (window, threadWin, events) <- createWindow' vpcUseGLDebug windowName resX resY
-    swapInterval 0
+    window <- createGLWindow windowName
+    --swapInterval $= SwapImmediate
     glClear GL_COLOR_BUFFER_BIT
-    swapBuffers window
+    glSwapWindow window
 
 
     (hmdType, isRoomScale) <- if
@@ -53,22 +41,13 @@ initVRPalWithConfig windowName VRPalConfig{..} = do
                     -- Disable the cursor
                     --setCursorInputMode window CursorInputMode'Disabled
 
-                    if useSDKMirror
-                        then do
-                            showMirrorWindow (ovrCompositor openVR)
-                            -- Clear and hide the application window, as we don't display to it
-                            glClear GL_COLOR_BUFFER_BIT
-                            -- iconifyWindow window
-                            -- Need focus to receive keyboard input, so focusing it here
-                            restoreWindow window
-                            showWindow window
-                        else forM_ (ovrEyes openVR) $ \eye -> case eiEye eye of
-                            LeftEye -> do
-                                let (_, _, w, h) = eiViewport eye
-                                setWindowSize window (fromIntegral w) (fromIntegral h)
-                                setWindowPosition window 0 0
-                                return ()
-                            _ -> return ()
+                    forM_ (ovrEyes openVR) $ \eye -> case eiEye eye of
+                        LeftEye -> do
+                            let (_, _, w, h) = eiViewport eye
+                            windowSize window $= V2 (fromIntegral w) (fromIntegral h)
+                            setWindowPosition window (Absolute (P (V2 0 0)))
+                            return ()
+                        _ -> return ()
 
                     -- Check if we're in the Vive or an Oculus by looking for lighthouses
                     roomScale <- isUsingLighthouse (ovrSystem openVR)
@@ -78,7 +57,7 @@ initVRPalWithConfig windowName VRPalConfig{..} = do
         | otherwise -> return (NoHMD, NotRoomScale)
 
     glClear GL_COLOR_BUFFER_BIT
-    swapBuffers window
+    glSwapWindow window
 
     start    <- getCurrentTime
     timeRef  <- newIORef start
@@ -86,43 +65,32 @@ initVRPalWithConfig windowName VRPalConfig{..} = do
 
     emulatedHandDepthRef <- newIORef (1, V3 0 0 0)
 
-    -- See note in renderWith
-    backgroundSwap <- newEmptyMVar
-    _ <- forkIO . forever $ do
-        action <- takeMVar backgroundSwap
-        action
-
     return VRPal
-        { gpWindow          = window
-        , gpThreadWindow    = threadWin
-        , gpEvents          = events
-        , gpHMD             = hmdType
-        , gpTimeRef         = timeRef
-        , gpDeltaRef        = deltaRef
-        , gpGCPerFrame      = doGCPerFrame
-        , gpRoomScale       = isRoomScale
-        , gpUseSDKMirror    = case hmdType of { NoHMD -> False; _ -> useSDKMirror }
-        , gpEmulatedHandRef = emulatedHandDepthRef
-        , gpBackgroundSwap  = backgroundSwap
+        { vrpWindow          = window
+        --, vrpThreadWindow    = threadWin
+        , vrpHMD             = hmdType
+        , vrpTimeRef         = timeRef
+        , vrpDeltaRef        = deltaRef
+        , vrpRoomScale       = isRoomScale
+        , vrpEmulatedHandRef = emulatedHandDepthRef
         }
 
 getDeltaTime :: MonadIO m => VRPal -> m NominalDiffTime
-getDeltaTime VRPal{..} = liftIO (readIORef gpDeltaRef)
+getDeltaTime VRPal{..} = liftIO (readIORef vrpDeltaRef)
 
 getNow :: MonadIO m => VRPal -> m UTCTime
-getNow VRPal{..} = liftIO (readIORef gpTimeRef)
+getNow VRPal{..} = liftIO (readIORef vrpTimeRef)
 
 logIO :: MonadIO m => String -> m ()
 logIO = liftIO . putStrLn
 
-tickVR :: MonadIO m => VRPal -> M44 GLfloat -> m (M44 GLfloat, [VRPalEvent])
-tickVR vrPal@VRPal{..} playerM44 = do
-    glfwEvents <- gatherEvents gpEvents
-    let winEvents = map GLFWEvent glfwEvents
+tickVR :: MonadIO m => VRPal -> M44 GLfloat -> [Event] -> m (M44 GLfloat, [VRPalEvent])
+tickVR vrPal@VRPal{..} playerM44 windowEvents = do
+    let winEvents = map WindowEvent windowEvents
 
     tickDelta vrPal
 
-    case gpHMD of
+    case vrpHMD of
         OpenVRHMD openVR@OpenVR{..} -> do
             events                       <- pollNextEvent ovrSystem
             (headM44Raw, handM44sByRole) <- waitGetPoses openVR
@@ -139,7 +107,7 @@ tickVR vrPal@VRPal{..} playerM44 = do
 
             return (headM44, winEvents ++ map VREvent vrEvents)
         _ -> do
-            emulatedVREvents <- emulateRightHandScreen vrPal playerM44 glfwEvents
+            emulatedVREvents <- emulateRightHandScreen vrPal playerM44 windowEvents
             return (playerM44, winEvents ++ emulatedVREvents)
 
 renderWith :: MonadIO m
@@ -149,29 +117,21 @@ renderWith :: MonadIO m
            -> m ()
 renderWith VRPal{..} headM44 eyeRenderFunc = do
     let viewM44 = inv44 headM44
-    case gpHMD of
+    case vrpHMD of
         NoHMD  -> do
-            (x,y,w,h) <- getWindowViewport gpWindow
+            (x,y,w,h) <- getWindowViewport vrpWindow
             glViewport x y w h
-            renderFlat gpWindow viewM44 (\p fv -> eyeRenderFunc p fv 0 0)
-            swapBuffers gpWindow
+            renderFlat vrpWindow viewM44 (\p fv -> eyeRenderFunc p fv 0 0)
+            glSwapWindow vrpWindow
         OpenVRHMD openVR -> do
             renderOpenVR openVR viewM44 eyeRenderFunc
-            when (not gpUseSDKMirror) $ do
-                (w,h) <- getWindowSize gpWindow
-                -- Mirror one eye to the window
-                let oneEye = listToMaybe (ovrEyes openVR)
-                forM_ oneEye (\eye -> mirrorOpenVREyeToWindow eye (fromIntegral w) (fromIntegral h))
 
-                -- This is a workaround to horrible regular stalls when calling swapBuffers on the main thread.
-                -- We use a one-slot MVar rather than a channel to avoid any memory leaks if the background
-                -- thread can't keep up - it's not important to update the mirror window on any particular
-                -- schedule as long as it happens semi-regularly.
-                swapBuffers gpWindow
-                --void . liftIO $ tryPutMVar gpBackgroundSwap (swapBuffers gpWindow)
+            -- Mirror one eye to the window
+            V2 w h <- get (windowSize vrpWindow)
+            let oneEye = listToMaybe (ovrEyes openVR)
+            forM_ oneEye (\eye -> mirrorOpenVREyeToWindow eye (fromIntegral w) (fromIntegral h))
 
-    -- when gpGCPerFrame $
-    --   profile "GC" 0 $ liftIO performMinorGC
+            glSwapWindow vrpWindow
 
 renderOpenVR :: (MonadIO m)
              => OpenVR
@@ -211,22 +171,22 @@ renderFlat win viewM44 renderFunc = do
     return ()
 
 recenterSeatedPose :: MonadIO m => VRPal -> m ()
-recenterSeatedPose vrPal = case gpHMD vrPal of
+recenterSeatedPose vrPal = case vrpHMD vrPal of
     OpenVRHMD openVR -> resetSeatedZeroPose (ovrSystem openVR)
     _ -> return ()
 
 
 fadeVRToColor :: MonadIO m => VRPal -> V4 GLfloat -> GLfloat -> m ()
-fadeVRToColor vrPal color time = case gpHMD vrPal of
-    OpenVRHMD openVR -> fadeCompositorToColor (ovrCompositor openVR) color time
+fadeVRToColor vrPal color fadeTime = case vrpHMD vrPal of
+    OpenVRHMD openVR -> fadeCompositorToColor (ovrCompositor openVR) color fadeTime
     _ -> return ()
 
 tickDelta :: MonadIO m => VRPal -> m ()
 tickDelta VRPal{..} = liftIO $ do
-    lastTime <- readIORef gpTimeRef
+    lastTime <- readIORef vrpTimeRef
     currTime <- getCurrentTime
 
     let diffTime = diffUTCTime currTime lastTime
 
-    writeIORef gpTimeRef currTime
-    writeIORef gpDeltaRef diffTime
+    writeIORef vrpTimeRef currTime
+    writeIORef vrpDeltaRef diffTime

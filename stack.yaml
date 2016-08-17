@@ -2,14 +2,9 @@ flags: {}
 packages:
 - '.'
 - '../gl-pal'
-- '../glfw-pal'
 - '../halive'
 - '../linear-extra'
 - '../lens-extra'
 - '../openvr-hs'
-resolver: nightly-2016-07-07
-extra-deps:
-- inline-c-cpp-0.1.0.0
-- GLFW-b-1.4.8.0
-- bindings-GLFW-3.1.2.0
-allow-newer: true
+- '../glfw-pal'
+resolver: nightly-2016-08-17

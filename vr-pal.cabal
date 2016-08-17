@@ -1,6 +1,6 @@
 name:                vr-pal
 version:             0.1.0.0
-synopsis:            Utilities for unifying gl-pal, oculus-mini, hydra-hs, glfw-pal, openvr-hs
+synopsis:            Simple interface to openvr-hs with SDL2
 description:         Please see README.md
 homepage:            http://github.com/lukexi/vr-pal#readme
 license:             BSD3
@@ -22,6 +22,7 @@ library
     Graphics.VR.Pal.Movement
     Graphics.VR.Pal.Types
     Graphics.VR.Pal.Window
+    Graphics.VR.Pal.SDLUtils
   build-depends:
     base,
     binary,
@@ -30,7 +31,8 @@ library
     lens-extra,
     linear-extra,
     gl,
-    glfw-pal,
+    sdl2,
+    text,
     gl-pal,
     -- halive,
     random,
@@ -50,13 +52,14 @@ test-suite minimal
   ghc-options:         -Wall -O2 -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base
                      , vr-pal
-                     , glfw-pal
                      , gl-pal
                      , gl
                      , linear-extra
                      , mtl
                      -- , halive
                      , time
+                     , sdl2
+                     , text
 
 test-suite cubefield
   type:                exitcode-stdio-1.0
@@ -66,7 +69,6 @@ test-suite cubefield
   ghc-options:         -Wall -O2 -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base
                      , vr-pal
-                     , glfw-pal
                      , gl-pal
                      , gl
                      , linear-extra
@@ -77,6 +79,8 @@ test-suite cubefield
                      , containers
                      , MonadRandom
                      , time
+                     , sdl2
+                     , text
 
 source-repository head
   type:     git

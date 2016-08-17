@@ -31,7 +31,7 @@ whichHandToTrackedControllerRole :: WhichHand -> TrackedControllerRole
 whichHandToTrackedControllerRole LeftHand = TrackedControllerRoleLeftHand
 whichHandToTrackedControllerRole RightHand = TrackedControllerRoleRightHand
 
-trackedControllerRoleToWhichHand :: TrackedControllerRole -> Maybe WhichHand 
+trackedControllerRoleToWhichHand :: TrackedControllerRole -> Maybe WhichHand
 trackedControllerRoleToWhichHand TrackedControllerRoleLeftHand  = Just LeftHand
 trackedControllerRoleToWhichHand TrackedControllerRoleRightHand = Just RightHand
 trackedControllerRoleToWhichHand _                              = Nothing
@@ -44,16 +44,16 @@ eButtonToHandButton EButtonAxis1           = Just HandButtonTrigger
 eButtonToHandButton _                      = Nothing
 
 triggerHandHapticPulse :: MonadIO m => VRPal -> WhichHand -> CInt -> CUShort -> m ()
-triggerHandHapticPulse VRPal{..} whichHand axis duration = case gpHMD of
-    OpenVRHMD openVR -> 
+triggerHandHapticPulse VRPal{..} whichHand axis duration = case vrpHMD of
+    OpenVRHMD openVR ->
         triggerHapticPulse (ovrSystem openVR) (whichHandToTrackedControllerRole whichHand) axis duration
     _ -> return ()
 
 handFromOpenVRController :: (Real a) => M44 GLfloat -> (a, a, a, Bool, Bool) -> Hand
-handFromOpenVRController matrix (x, y, trigger, grip, start) = emptyHand 
-    { _hndMatrix  = matrix 
+handFromOpenVRController matrix (x, y, trigger, grip, start) = emptyHand
+    { _hndMatrix  = matrix
     , _hndXY      = realToFrac <$> V2 x y
-    , _hndTrigger = realToFrac trigger 
+    , _hndTrigger = realToFrac trigger
     , _hndGrip    = grip
     , _hndButtonS = start
     }
@@ -78,12 +78,12 @@ deadzoneOf :: (Num a, Ord a) => a -> a -> a
 deadzoneOf zone value = if abs value > zone then value else 0
 
 showHandKeyboard :: MonadIO m => VRPal -> m ()
-showHandKeyboard VRPal{..} = case gpHMD of
+showHandKeyboard VRPal{..} = case vrpHMD of
     OpenVRHMD _ -> showKeyboard
     _ -> return ()
 
 hideHandKeyboard :: MonadIO m => VRPal -> m ()
-hideHandKeyboard VRPal{..} = case gpHMD of
+hideHandKeyboard VRPal{..} = case vrpHMD of
     OpenVRHMD _ -> hideKeyboard
     _ -> return ()
 
@@ -98,7 +98,7 @@ onRightHandEvent (VREvent (HandEvent RightHand handEvent)) f = f handEvent
 onRightHandEvent _ _ = return ()
 
 onHandEvent :: Monad m => WhichHand -> VRPalEvent -> (HandEvent -> m ()) -> m ()
-onHandEvent desiredHand (VREvent (HandEvent eventHand handEvent)) f 
+onHandEvent desiredHand (VREvent (HandEvent eventHand handEvent)) f
     | desiredHand == eventHand = f handEvent
 onHandEvent _ _ _ = return ()
 

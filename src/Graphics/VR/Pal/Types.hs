@@ -2,15 +2,12 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE DeriveGeneric #-}
 module Graphics.VR.Pal.Types where
-
-import Graphics.UI.GLFW.Pal
-
+import SDL
 import Data.Time
 import Data.IORef
 import Data.Hashable
 import GHC.Generics
 import Graphics.VR.OpenVR
-import Control.Concurrent
 import Control.Lens.Extra
 import Linear.Extra
 import Graphics.GL.Pal
@@ -31,8 +28,6 @@ defaultVRPalConfig = VRPalConfig
 -- | Passed to init to determine which devices to initialize
 data VRPalDevices = UseOpenVR | UseOculus deriving (Eq, Show, Ord)
 
--- | Instructs vr-pal to run a garbage collection after each frame render
-data GCPerFrame = GCPerFrame | NoGCPerFrame deriving (Eq, Show, Ord)
 
 -- | Indicates when we're using the Vive
 data RoomScale = RoomScale | NotRoomScale deriving (Eq, Show, Ord)
@@ -41,21 +36,17 @@ data HMDType = NoHMD
              | OpenVRHMD OpenVR
 
 data VRPal = VRPal
-    { gpWindow          :: !Window
-    , gpThreadWindow    :: !Window
-    , gpEvents          :: !Events
-    , gpHMD             :: !HMDType
-    , gpTimeRef         :: !(IORef UTCTime)
-    , gpDeltaRef        :: !(IORef NominalDiffTime)
-    , gpGCPerFrame      :: !Bool
-    , gpUseSDKMirror    :: !Bool
-    , gpRoomScale       :: !RoomScale
-    , gpEmulatedHandRef :: !(IORef (Float, V3 GLfloat))
-    , gpBackgroundSwap  :: !(MVar (IO ()))
+    { vrpWindow          :: !Window
+    --, vrpThreadWindow    :: !Window
+    , vrpHMD             :: !HMDType
+    , vrpTimeRef         :: !(IORef UTCTime)
+    , vrpDeltaRef        :: !(IORef NominalDiffTime)
+    , vrpRoomScale       :: !RoomScale
+    , vrpEmulatedHandRef :: !(IORef (Float, V3 GLfloat))
     }
 
 
-data VRPalEvent = GLFWEvent Event
+data VRPalEvent = WindowEvent Event
                 | VREvent VREvent
                 deriving Show
 

@@ -3,6 +3,7 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Main where
 
@@ -53,13 +54,11 @@ main = do
     glEnable GL_DEPTH_TEST
     useProgram (sProgram cubeShape)
 
-    void . flip runStateT identity . whileWindow gpWindow $ do
+    void . flip runStateT identity . whileWindow vrpWindow $ \winEvents -> do
         playerM44 <- get
-        (headM44, events) <- tickVR vrPal playerM44
-        applyWASD gpWindow (iso poseFromMatrix transformationFromPose)
-        forM_ events $ \case
-            GLFWEvent e -> closeOnEscape gpWindow e
-            _ -> return ()
+        (headM44, events) <- tickVR vrPal playerM44 winEvents
+        applyWASD (iso poseFromMatrix transformationFromPose)
+
         let handStates = flip concatMap events $ \case
                 VREvent (HandEvent _ (HandStateEvent handState)) -> [handState]
                 _                                                -> []
