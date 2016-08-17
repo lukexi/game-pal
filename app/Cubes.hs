@@ -74,7 +74,7 @@ render :: (MonadIO m)
        -> V4 GLfloat
        -> V4 GLfloat
        -> m ()
-render cubeShape cubes projM44 viewM44 projRaw viewport = do
+render cubeShape cubes projM44 viewM44 _projRaw _viewport = do
     glClear (GL_COLOR_BUFFER_BIT .|. GL_DEPTH_BUFFER_BIT)
 
     let Uniforms{..} = sUniforms cubeShape
