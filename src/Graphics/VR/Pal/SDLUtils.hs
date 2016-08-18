@@ -6,10 +6,13 @@ import SDL
 import SDL.Internal.Types
 import qualified SDL.Raw.Video as Raw
 import Foreign.C
+import Foreign.Ptr
 import Control.Monad
 import Control.Monad.IO.Class
 import Data.Text (Text)
+import qualified Data.Text as Text
 import Linear.Extra
+import Linear.Affine
 import Control.Lens.Extra
 import Data.List (sort)
 import Foreign
@@ -39,14 +42,21 @@ createGLWindow windowName = do
     swapInterval $= ImmediateUpdates
     return window
 
-getDrawableSize :: MonadIO m => Window -> m (V2 CInt)
+getDrawableSize :: (Num a, MonadIO m) => Window -> m (V2 a)
 getDrawableSize (Window window) =
     liftIO $
     alloca $ \wptr ->
     alloca $ \hptr -> do
       Raw.glGetDrawableSize window wptr hptr
-      V2 <$> peek wptr <*> peek hptr
+      fmap fromIntegral <$> (V2 <$> peek wptr <*> peek hptr)
 
+getMouseLocationV2 :: (Num a, MonadIO m) => m (V2 a)
+getMouseLocationV2 = do
+    (_, P loc) <- getModalMouseLocation
+    return (fromIntegral <$> loc)
+
+getWindowSizeV2 :: (Num a, MonadIO m) => Window -> m (V2 a)
+getWindowSizeV2 window = fmap fromIntegral <$> get (windowSize window)
 
 whileWindow :: MonadIO m => Window -> ([Event] -> m a) -> m ()
 whileWindow window action = do
@@ -108,17 +118,17 @@ onMouse1Up _                 _ = return ()
 -- | Use the aspect ratio from the window to get a proper projection
 getWindowProjection :: (Floating a, MonadIO m) => Window -> a -> a -> a -> m (M44 a)
 getWindowProjection win fov near far = do
-    V2 w h <- get (windowSize win)
-    return $ perspective fov (fromIntegral w / fromIntegral h) near far
+    V2 w h <- getWindowSizeV2 win
+    return $ perspective fov (w / h) near far
 
 windowPosToWorldRay :: (MonadIO m)
                     => Window
                     -> M44 Float
                     -> Pose Float
-                    -> V2 Int
+                    -> V2 Float
                     -> m (Ray Float)
 windowPosToWorldRay win proj pose coord = do
-    winSize <- get (windowSize win)
+    winSize <- getWindowSizeV2 win
     let V2 xNDC yNDC = win2Ndc coord winSize
         start        = ndc2Wld (V4 xNDC yNDC (-1.0) 1.0)
         end          = ndc2Wld (V4 xNDC yNDC 0.0    1.0)
@@ -126,7 +136,7 @@ windowPosToWorldRay win proj pose coord = do
     return (Ray start dir)
 
     where -- Converts from window coordinates (origin top-left) to normalized device coordinates
-      win2Ndc (fmap fromIntegral -> V2 x y) (fmap fromIntegral -> V2 w h) =
+      win2Ndc (V2 x y) (V2 w h) =
         V2
             ((x / w        - 0.5) * 2.0)
             (((h - y) / h - 0.5) * 2.0)
@@ -142,15 +152,15 @@ cursorPosToWorldRay :: (MonadIO m)
                     -> Pose Float
                     -> m (Ray Float)
 cursorPosToWorldRay win proj pose = do
-    (_, P cursorPos) <- getModalMouseLocation
-    windowPosToWorldRay win proj pose (fromIntegral <$> cursorPos)
+    cursorPos <- getMouseLocationV2
+    windowPosToWorldRay win proj pose cursorPos
 
 
 -- | Pass this to glViewport to get the correct size on Retina Macs and normal Windows
 getWindowViewport :: (Num a, MonadIO m) => Window -> m (a, a, a, a)
 getWindowViewport win = do
     V2 w h <- getDrawableSize win
-    return (0, 0, fromIntegral w, fromIntegral h)
+    return (0, 0, w, h)
 
 
 data ModKey = ModKeyShift
@@ -241,3 +251,38 @@ onKeyDown = ifKeyDown ()
 
 onKey :: Monad m => Event -> Keycode -> m () -> m ()
 onKey = ifKey ()
+
+-- | Warning: does not include a valid Scancode, Window, or Timestamp
+fakeKeycodePressedEvent keycode mods = fakeEvent . KeyboardEvent $
+    KeyboardEventData
+        { keyboardEventWindow = Window nullPtr
+        , keyboardEventKeyMotion = Pressed
+        , keyboardEventKeysym = Keysym
+            { keysymKeycode = keycode
+            , keysymScancode = Scancode 0
+            , keysymModifier = keyModifierFromModkeys mods
+            }
+        }
+
+fakeTextInputEventFromChar char = fakeEvent . TextInputEvent $
+    TextInputEventData
+        { textInputEventWindow = Window nullPtr
+        , textInputEventText = Text.pack [char]
+        }
+
+
+fakeEvent payload = (Event {eventTimestamp = 0, eventPayload = payload })
+
+keyModifierFromModkeys modkeys = KeyModifier
+    { keyModifierLeftShift  = ModKeyShift `elem` modkeys
+    , keyModifierRightShift = False
+    , keyModifierLeftCtrl   = ModKeyControl `elem` modkeys
+    , keyModifierRightCtrl  = False
+    , keyModifierLeftAlt    = ModKeyAlt `elem` modkeys
+    , keyModifierRightAlt   = False
+    , keyModifierLeftGUI    = ModKeySuper `elem` modkeys
+    , keyModifierRightGUI   = False
+    , keyModifierNumLock    = False
+    , keyModifierCapsLock   = False
+    , keyModifierAltGr      = False
+    }

@@ -83,8 +83,8 @@ emulateRightHandVR VRPal{..} playerM44 events = do
 
     z <- fst <$> liftIO (readIORef vrpEmulatedHandRef)
 
-    V2 w h <- fmap fromIntegral <$> get (windowSize vrpWindow)
-    (_, P (fmap fromIntegral -> V2 x y)) <- getModalMouseLocation
+    V2 w h <- getWindowSizeV2 vrpWindow
+    V2 x y <- getMouseLocationV2
     -- a <- getNow -- swap with line below to rotate hand for testing
     let a = 0
         trigger      = if mouse1Down then 1 else 0

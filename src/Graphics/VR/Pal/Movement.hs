@@ -15,9 +15,9 @@ moveSpeed = 0.01
 
 applyMouseLook :: (MonadIO m, MonadState s m) => Window -> Lens' s (Pose GLfloat) -> m ()
 applyMouseLook win poseLens = do
-    (_, P (V2 x y)) <- getModalMouseLocation
+    V2 x y <- getMouseLocationV2
     V2 w h <- get (windowSize win)
-    let (x', y') = (fromIntegral x - (fromIntegral w / 2), fromIntegral y - (fromIntegral h / 2))
+    let (x', y') = (x - (fromIntegral w / 2), y - (fromIntegral h / 2))
     poseLens . posOrientation .= axisAngle (V3 0 1 0) (-x'/500)
                                * axisAngle (V3 1 0 0) (-y'/500)
 

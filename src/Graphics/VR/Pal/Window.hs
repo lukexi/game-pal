@@ -9,6 +9,7 @@ import Control.Monad
 
 import Control.Monad.Trans
 import Linear.Extra
+import Linear.Affine
 import Graphics.VR.Pal.Types
 import Graphics.VR.Pal.Hands
 import Graphics.VR.Pal.Emulation
