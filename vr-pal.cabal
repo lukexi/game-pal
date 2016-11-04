@@ -87,7 +87,8 @@ test-suite cubefield
                      , time
                      , sdl2
                      , text
-  extra-libraries: user32
+  if os(windows)
+    extra-libraries: user32
 
 
 source-repository head
