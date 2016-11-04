@@ -1,6 +1,7 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ForeignFunctionInterface #-}
+{-# LANGUAGE CPP #-}
 module Graphics.VR.Pal.SDLUtils where
 import SDL
 import SDL.Internal.Types
@@ -17,7 +18,9 @@ import Control.Lens.Extra
 import Data.List (sort)
 import Foreign
 
+#if defined(mingw32_HOST_OS)
 foreign import ccall "win32_SetProcessDpiAware" win32_SetProcessDpiAware :: IO Bool
+#endif
 
 createGLWindow :: MonadIO m => Text -> m Window
 createGLWindow windowName = do
@@ -26,7 +29,12 @@ createGLWindow windowName = do
         , InitEvents
         -- , InitJoystick , InitGameController
         ]
+
+    -- Make Windows treat us as HighDPI aware
+#if defined(mingw32_HOST_OS)
     _ <- liftIO win32_SetProcessDpiAware
+#endif
+
     window <- createWindow windowName defaultWindow
         { windowOpenGL = Just $ defaultOpenGL
             { glProfile = Core Normal 4 4
