@@ -22,6 +22,13 @@ import Foreign
 foreign import ccall "win32_SetProcessDpiAware" win32_SetProcessDpiAware :: IO Bool
 #endif
 
+glProfileVersion :: Profile
+#if defined(darwin_HOST_OS)
+glProfileVersion = Core Normal 4 1
+#else
+glProfileVersion = Core Normal 4 4
+#endif
+
 createGLWindow :: MonadIO m => Text -> m Window
 createGLWindow windowName = do
     initialize
@@ -37,7 +44,7 @@ createGLWindow windowName = do
 
     window <- createWindow windowName defaultWindow
         { windowOpenGL = Just $ defaultOpenGL
-            { glProfile = Core Normal 4 4
+            { glProfile = glProfileVersion
             }
         , windowHighDPI = True
         , windowInitialSize = V2 1600 1200
