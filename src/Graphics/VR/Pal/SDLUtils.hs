@@ -272,6 +272,7 @@ fakeKeycodePressedEvent keycode mods = fakeEvent . KeyboardEvent $
     KeyboardEventData
         { keyboardEventWindow = Window nullPtr
         , keyboardEventKeyMotion = Pressed
+        , keyboardEventRepeat = False
         , keyboardEventKeysym = Keysym
             { keysymKeycode = keycode
             , keysymScancode = Scancode 0
